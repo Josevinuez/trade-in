@@ -8,9 +8,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       switch (type) {
         case 'categories':
+          console.log('Fetching categories...');
           const categoriesData = await prisma.deviceCategory.findMany({
             orderBy: { name: 'asc' }
           });
+          console.log('Categories found:', categoriesData);
           return res.status(200).json(categoriesData);
 
         case 'brands':

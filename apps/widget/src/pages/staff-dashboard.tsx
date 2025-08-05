@@ -221,6 +221,8 @@ export default function StaffDashboard() {
   // Device management functions
   const fetchDeviceManagementData = async () => {
     try {
+      console.log('Fetching device management data...');
+      
       const [devicesRes, categoriesRes, brandsRes, conditionsRes] = await Promise.all([
         fetch('/api/staff/devices?type=models'),
         fetch('/api/staff/devices?type=categories'),
@@ -232,6 +234,10 @@ export default function StaffDashboard() {
       const categoriesData = await categoriesRes.json();
       const brandsData = await brandsRes.json();
       const conditionsData = await conditionsRes.json();
+
+      console.log('Categories data:', categoriesData);
+      console.log('Brands data:', brandsData);
+      console.log('Conditions data:', conditionsData);
 
       setDevices(devicesData);
       setCategories(categoriesData);
