@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "pnpm -r dev",
-    "build": "pnpm --filter @device-buyback/types build && pnpm -r build",
+    "build": "pnpm --filter @device-buyback/types build && cd apps/widget && npx prisma generate && pnpm -r build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test"
   },
