@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Smartphone, Menu, X } from 'lucide-react';
+import { Smartphone, Menu, X, User, Shield } from 'lucide-react';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -10,6 +10,11 @@ export function Header() {
       element.scrollIntoView({ behavior: 'smooth' });
     }
     setIsMenuOpen(false);
+  };
+
+  const handleStaffLogin = () => {
+    // Navigate to staff login page
+    window.location.href = '/staff-login';
   };
 
   return (
@@ -55,8 +60,15 @@ export function Header() {
             <a href="tel:1-800-TRADE-IN" className="text-blue-600 font-semibold hover:text-blue-700">
               1-800-TRADE-IN
             </a>
-            <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+            <a href="/track-order" className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
               Track My Offer
+            </a>
+            <button 
+              onClick={handleStaffLogin}
+              className="flex items-center space-x-1 text-gray-600 hover:text-purple-600 transition-colors px-3 py-2 rounded-lg hover:bg-purple-50"
+            >
+              <Shield className="w-4 h-4" />
+              <span className="text-sm">Staff Login</span>
             </button>
           </div>
 
@@ -105,9 +117,18 @@ export function Header() {
                 <a href="tel:1-800-TRADE-IN" className="text-blue-600 font-semibold hover:text-blue-700 block py-2">
                   1-800-TRADE-IN
                 </a>
-                <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors w-full mt-2">
+                <a href="/track-order" className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors w-full mt-2 block text-center">
                   Track My Offer
-                </button>
+                </a>
+                <div className="mt-4 space-y-2">
+                  <button 
+                    onClick={handleStaffLogin}
+                    className="flex items-center space-x-2 text-gray-600 hover:text-purple-600 transition-colors w-full py-2"
+                  >
+                    <Shield className="w-4 h-4" />
+                    <span>Staff Login</span>
+                  </button>
+                </div>
               </div>
             </nav>
           </div>

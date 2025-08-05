@@ -5,7 +5,9 @@ import { create } from 'zustand';
 interface DeviceStore {
   device: Partial<Device> | null;
   quote: number | null;
+  deviceCatalog: any | null;
   setDevice: (device: Partial<Device>) => void;
+  setDeviceCatalog: (catalog: any) => void;
   calculateQuote: () => void;
   resetDevice: () => void;
 }
@@ -78,16 +80,50 @@ const storageMultipliers: Record<StorageOption, number> = {
 export const useDeviceStore = create<DeviceStore>((set) => ({
   device: null,
   quote: null,
+  deviceCatalog: null,
   setDevice: (newDevice) =>
     set((state) => ({
       device: { ...state.device, ...newDevice },
     })),
+  setDeviceCatalog: (catalog) =>
+    set({ deviceCatalog: catalog }),
   calculateQuote: () =>
     set((state) => {
       if (!state.device?.model || !state.device?.condition || !state.device?.storage) {
         return { quote: null };
       }
 
+      // Use dynamic pricing from device catalog if available
+      if (state.deviceCatalog) {
+        const model = state.deviceCatalog.models.find((m: any) => m.name === state.device?.model);
+        
+        if (model) {
+          // Find the storage option for this model
+          const storageOption = model.storageOptions?.find((so: any) => so.storage === state.device?.storage);
+          
+          if (storageOption) {
+            const selectedCondition = state.device?.condition?.toLowerCase() || '';
+            let price = '0';
+
+            if (selectedCondition === 'excellent' || selectedCondition === 'like-new') {
+              price = storageOption.excellentPrice;
+            } else if (selectedCondition === 'good') {
+              price = storageOption.goodPrice;
+            } else if (selectedCondition === 'fair') {
+              price = storageOption.fairPrice;
+            } else if (selectedCondition === 'poor') {
+              price = storageOption.poorPrice;
+            }
+
+            if (price) {
+              const quote = parseFloat(price);
+              return { quote };
+            }
+          }
+        }
+      }
+
+      // Fallback to hardcoded pricing
       const basePrice = basePrices[state.device.model as DeviceModel] || 500;
       const conditionMultiplier = conditionMultipliers[state.device.condition];
       const storageMultiplier = storageMultipliers[state.device.storage];
