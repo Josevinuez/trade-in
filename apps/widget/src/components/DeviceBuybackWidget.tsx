@@ -24,7 +24,10 @@ interface DeviceCategory {
 interface DeviceModel {
   id: number;
   name: string;
-  brand: { name: string };
+  brand: { 
+    name: string;
+    logoUrl?: string;
+  };
   category: { name: string };
   storageOptions: Array<{
     id: number;
@@ -312,9 +315,20 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="flex flex-col items-center space-y-2">
-                    {category.icon && <img src={category.icon} alt={category.name} className="w-10 h-10" />}
-                    <span className="font-medium">{category.name}</span>
+                  <div className="flex flex-col items-center space-y-3">
+                    {category.icon ? (
+                      <img src={category.icon} alt={category.name} className="w-12 h-12 object-contain" />
+                    ) : (
+                      <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                        <span className="text-2xl">
+                          {category.name === 'Smartphones' ? '📱' : 
+                           category.name === 'Tablets' ? '📱' : 
+                           category.name === 'Laptops' ? '💻' : 
+                           category.name === 'Gaming Consoles' ? '🎮' : '📱'}
+                        </span>
+                      </div>
+                    )}
+                    <span className="font-medium text-center">{category.name}</span>
                   </div>
                 </motion.button>
               ))}
@@ -327,23 +341,35 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-center">Select your device brand</h2>
             <div className="grid grid-cols-2 gap-4">
-              {filteredBrands.map((brandName) => (
-                <motion.button
-                  key={brandName}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleBrandSelect(brandName)}
-                  className={`p-6 rounded-lg border-2 transition-all ${
-                    device?.brand === brandName
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex flex-col items-center space-y-2">
-                    <span className="font-medium capitalize">{brandName}</span>
-                  </div>
-                </motion.button>
-              ))}
+              {filteredBrands.map((brandName) => {
+                const brand = deviceModels.find(model => model.brand.name === brandName)?.brand;
+                return (
+                  <motion.button
+                    key={brandName}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleBrandSelect(brandName)}
+                    className={`p-6 rounded-lg border-2 transition-all ${
+                      device?.brand === brandName
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center space-y-3">
+                      {brand?.logoUrl ? (
+                        <img src={brand.logoUrl} alt={brandName} className="w-12 h-12 object-contain" />
+                      ) : (
+                        <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                          <span className="text-lg font-bold text-gray-600">
+                            {brandName.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <span className="font-medium capitalize text-center">{brandName}</span>
+                    </div>
+                  </motion.button>
+                );
+              })}
             </div>
           </div>
         );
@@ -595,9 +621,20 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
               onClick={() => setShowForm?.(true)}
               className="p-6 rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-all"
             >
-              <div className="flex flex-col items-center space-y-2">
-                {category.icon && <img src={category.icon} alt={category.name} className="w-10 h-10" />}
-                <span className="font-medium">{category.name}</span>
+              <div className="flex flex-col items-center space-y-3">
+                {category.icon ? (
+                  <img src={category.icon} alt={category.name} className="w-12 h-12 object-contain" />
+                ) : (
+                  <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                    <span className="text-2xl">
+                      {category.name === 'Smartphones' ? '📱' : 
+                       category.name === 'Tablets' ? '📱' : 
+                       category.name === 'Laptops' ? '💻' : 
+                       category.name === 'Gaming Consoles' ? '🎮' : '📱'}
+                    </span>
+                  </div>
+                )}
+                <span className="font-medium text-center">{category.name}</span>
               </div>
             </motion.button>
           ))}

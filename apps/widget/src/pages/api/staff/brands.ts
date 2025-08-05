@@ -10,7 +10,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         case 'brands':
           const { data: allBrands, error } = await supabaseAdmin
             .from('DeviceBrand')
-            .select('*')
+            .select(`
+              *,
+              _count:DeviceModel(count)
+            `)
             .order('name', { ascending: true });
           
           if (error) throw error;
@@ -52,37 +55,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch (error: any) {
       console.error('Brand creation error:', error);
       return res.status(500).json({ error: 'Failed to create brand' });
-    }
-  }
-
-  if (req.method === 'PUT') {
-    try {
-      const { type, data } = req.body;
-
-      switch (type) {
-        case 'brand':
-          const { id, name, logoUrl, isActive } = data;
-          
-          const { data: updatedBrand, error } = await supabaseAdmin
-            .from('DeviceBrand')
-            .update({
-              name,
-              logoUrl: logoUrl || null,
-              isActive: isActive !== undefined ? isActive : true
-            })
-            .eq('id', parseInt(id))
-            .select()
-            .single();
-
-          if (error) throw error;
-          return res.status(200).json(updatedBrand);
-
-        default:
-          return res.status(400).json({ error: 'Invalid type' });
-      }
-    } catch (error: any) {
-      console.error('Brand update error:', error);
-      return res.status(500).json({ error: 'Failed to update brand' });
     }
   }
 

@@ -116,17 +116,6 @@ export default function Home() {
       <section id="quote-section" className="py-20 bg-gradient-to-br from-purple-50 to-blue-50">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                Get an instant quote:
-              </h2>
-              <h3 className="text-5xl font-bold text-gray-900 mb-2">
-                What are you selling?
-              </h3>
-              <p className="text-xl text-orange-500 font-medium">
-                Search or select your device
-              </p>
-            </div>
             <DeviceBuybackWidget showForm={showForm} setShowForm={setShowForm} />
           </div>
         </div>

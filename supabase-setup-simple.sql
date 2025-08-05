@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS "DeviceCategory" (
   "id" SERIAL PRIMARY KEY,
   "name" TEXT NOT NULL UNIQUE,
   "description" TEXT,
+  "icon" TEXT,
   "displayOrder" INTEGER DEFAULT 0,
   "isActive" BOOLEAN DEFAULT true,
   "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
