@@ -1,0 +1,11 @@
+{
+  "buildCommand": "cd apps/widget && pnpm build",
+  "installCommand": "pnpm install",
+  "outputDirectory": "apps/widget/.next",
+  "framework": "nextjs",
+  "functions": {
+    "apps/widget/.next/server/**/*.js": {
+      "maxDuration": 30
+    }
+  }
+} 
