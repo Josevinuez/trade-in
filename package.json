@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "pnpm -r dev",
-    "build": "pnpm --filter @device-buyback/types build && pnpm --filter @device-buyback/widget build",
+    "build": "pnpm --filter @device-buyback/widget build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test"
   },
