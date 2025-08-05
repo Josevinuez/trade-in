@@ -1,4 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import fs from 'fs';
+import path from 'path';
 
 export const config = {
   api: {
@@ -25,19 +27,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid image format' });
     }
 
-    // Extract the base64 data
-    const base64Data = imageData.split(',')[1];
-    if (!base64Data) {
+    // Extract the base64 data and mime type
+    const matches = imageData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
       return res.status(400).json({ error: 'Invalid base64 data' });
     }
 
-    // For demo purposes, we'll just return a success response with a placeholder URL
-    // In production, you would save this to a cloud storage service like AWS S3, Cloudinary, etc.
-    const imageUrl = `https://via.placeholder.com/300x300/007bff/ffffff?text=${encodeURIComponent(fileName)}`;
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+
+    // Validate mime type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'];
+    if (!allowedTypes.includes(mimeType)) {
+      return res.status(400).json({ error: 'Invalid image type. Only JPEG, PNG, WebP, and SVG are allowed.' });
+    }
+
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const extension = mimeType.split('/')[1];
+    const uniqueFileName = `${timestamp}-${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const filePath = path.join(uploadsDir, uniqueFileName);
+
+    // Convert base64 to buffer and save file
+    const buffer = Buffer.from(base64Data, 'base64');
+    fs.writeFileSync(filePath, buffer);
+
+    // Return the public URL
+    const imageUrl = `/uploads/${uniqueFileName}`;
 
     res.status(200).json({ 
       imageUrl,
-      message: 'Image uploaded successfully (demo mode - using placeholder)' 
+      message: 'Image uploaded successfully',
+      fileName: uniqueFileName,
+      fileSize: buffer.length
     });
 
   } catch (error) {

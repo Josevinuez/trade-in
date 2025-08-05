@@ -13,6 +13,14 @@ interface DeviceBuybackWidgetProps {
   setShowForm?: (show: boolean) => void;
 }
 
+interface DeviceCategory {
+  id: number;
+  name: string;
+  description?: string;
+  icon?: string;
+  isActive: boolean;
+}
+
 interface DeviceModel {
   id: number;
   name: string;
@@ -33,13 +41,6 @@ interface DeviceCondition {
   name: string;
   multiplier: number;
 }
-
-const DEVICE_TYPES: { type: DeviceType; icon: React.ReactNode; label: string }[] = [
-  { type: 'smartphone', icon: <Smartphone className="w-6 h-6" />, label: 'Smartphone' },
-  { type: 'tablet', icon: <Tablet className="w-6 h-6" />, label: 'Tablet' },
-  { type: 'laptop', icon: <Laptop className="w-6 h-6" />, label: 'Laptop' },
-  { type: 'smartwatch', icon: <Watch className="w-6 h-6" />, label: 'Smartwatch' },
-];
 
 const STEPS = ['type', 'brand', 'model', 'storage', 'condition', 'quote', 'customerInfo'] as const;
 type Step = typeof STEPS[number];
@@ -62,8 +63,10 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
   });
 
   // Backend data
+  const [deviceCategories, setDeviceCategories] = useState<DeviceCategory[]>([]);
   const [deviceModels, setDeviceModels] = useState<DeviceModel[]>([]);
   const [deviceConditions, setDeviceConditions] = useState<DeviceCondition[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<DeviceCategory | null>(null);
   const [selectedDeviceModel, setSelectedDeviceModel] = useState<DeviceModel | null>(null);
   const [selectedCondition, setSelectedCondition] = useState<DeviceCondition | null>(null);
   const [selectedStorage, setSelectedStorage] = useState<string>('');
@@ -75,14 +78,15 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
   useEffect(() => {
     const fetchDeviceData = async () => {
       try {
-        const [modelsResponse, conditionsResponse] = await Promise.all([
+        const [catalogResponse, conditionsResponse] = await Promise.all([
           fetch('/api/devices/catalog'),
           fetch('/api/devices/conditions')
         ]);
         
-        if (modelsResponse.ok) {
-          const modelsData = await modelsResponse.json();
-          setDeviceModels(modelsData.models || []);
+        if (catalogResponse.ok) {
+          const catalogData = await catalogResponse.json();
+          setDeviceCategories(catalogData.categories || []);
+          setDeviceModels(catalogData.models || []);
         }
         
         if (conditionsResponse.ok) {
@@ -136,21 +140,35 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
     }
   };
 
-  const handleDeviceTypeSelect = (type: DeviceType) => {
-    setDevice({ type, brand: undefined, model: undefined, storage: undefined, condition: undefined });
-    setSelectedDeviceModel(null);
-    setSelectedStorage('');
-    setSelectedCondition(null);
-    setQuoteAmount(0);
+  const handleDeviceTypeSelect = (categoryName: string) => {
+    const category = deviceCategories.find(cat => cat.name === categoryName);
+    if (category) {
+      setSelectedCategory(category);
+      setDevice({ type: categoryName as DeviceType, brand: undefined, model: undefined, storage: undefined, condition: undefined });
+      setCurrentStep('brand');
+    }
   };
 
-  const handleBrandSelect = (brand: DeviceBrand) => {
-    setDevice({ brand, model: undefined, storage: undefined, condition: undefined });
+  const handleBrandSelect = (brandName: string) => {
+    setDevice({ ...device, brand: brandName as DeviceBrand, model: undefined, storage: undefined, condition: undefined });
     setSelectedDeviceModel(null);
     setSelectedStorage('');
     setSelectedCondition(null);
     setQuoteAmount(0);
+    setCurrentStep('model');
   };
+
+  // Filter brands by selected category
+  const filteredBrands = deviceModels
+    .filter(model => model.category.name === selectedCategory?.name)
+    .map(model => model.brand.name)
+    .filter((brandName, index, self) => self.indexOf(brandName) === index);
+
+  // Filter models by selected category and brand
+  const filteredModels = deviceModels.filter(model => 
+    model.category.name === selectedCategory?.name && 
+    model.brand.name === device?.brand
+  );
 
   const handleModelSelect = (model: DeviceModel) => {
     setSelectedDeviceModel(model);
@@ -261,21 +279,21 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-center">What type of device are you selling?</h2>
             <div className="grid grid-cols-2 gap-4">
-              {DEVICE_TYPES.map((deviceType) => (
+              {deviceCategories.map((category) => (
                 <motion.button
-                  key={deviceType.type}
+                  key={category.id}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => handleDeviceTypeSelect(deviceType.type)}
+                  onClick={() => handleDeviceTypeSelect(category.name)}
                   className={`p-6 rounded-lg border-2 transition-all ${
-                    device?.type === deviceType.type
+                    device?.type === category.name
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div className="flex flex-col items-center space-y-2">
-                    {deviceType.icon}
-                    <span className="font-medium">{deviceType.label}</span>
+                    {category.icon && <img src={category.icon} alt={category.name} className="w-10 h-10" />}
+                    <span className="font-medium">{category.name}</span>
                   </div>
                 </motion.button>
               ))}
@@ -288,31 +306,23 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-center">Select your device brand</h2>
             <div className="grid grid-cols-2 gap-4">
-              {deviceModels
-                .filter(model => model.category.name.toLowerCase() === device?.type)
-                .reduce((brands, model) => {
-                  if (!brands.includes(model.brand.name)) {
-                    brands.push(model.brand.name);
-                  }
-                  return brands;
-                }, [] as string[])
-                .map((brand) => (
-                  <motion.button
-                    key={brand}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleBrandSelect(brand as DeviceBrand)}
-                    className={`p-6 rounded-lg border-2 transition-all ${
-                      device?.brand === brand
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex flex-col items-center space-y-2">
-                      <span className="font-medium capitalize">{brand}</span>
-                    </div>
-                  </motion.button>
-                ))}
+              {filteredBrands.map((brandName) => (
+                <motion.button
+                  key={brandName}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleBrandSelect(brandName)}
+                  className={`p-6 rounded-lg border-2 transition-all ${
+                    device?.brand === brandName
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex flex-col items-center space-y-2">
+                    <span className="font-medium capitalize">{brandName}</span>
+                  </div>
+                </motion.button>
+              ))}
             </div>
           </div>
         );
@@ -322,28 +332,23 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-center">Select your device model</h2>
             <div className="grid grid-cols-2 gap-4">
-              {deviceModels
-                .filter(model => 
-                  model.category.name.toLowerCase() === device?.type && 
-                  model.brand.name.toLowerCase() === device?.brand?.toLowerCase()
-                )
-                .map((model) => (
-                  <motion.button
-                    key={model.id}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleModelSelect(model)}
-                    className={`p-6 rounded-lg border-2 transition-all ${
-                      selectedDeviceModel?.id === model.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex flex-col items-center space-y-2">
-                      <span className="font-medium text-center">{model.name}</span>
-                    </div>
-                  </motion.button>
-                ))}
+              {filteredModels.map((model) => (
+                <motion.button
+                  key={model.id}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleModelSelect(model)}
+                  className={`p-6 rounded-lg border-2 transition-all ${
+                    selectedDeviceModel?.id === model.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex flex-col items-center space-y-2">
+                    <span className="font-medium text-center">{model.name}</span>
+                  </div>
+                </motion.button>
+              ))}
             </div>
           </div>
         );
@@ -552,17 +557,17 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-2xl mx-auto">
-          {DEVICE_TYPES.map((deviceType) => (
+          {deviceCategories.map((category) => (
             <motion.button
-              key={deviceType.type}
+              key={category.id}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowForm?.(true)}
               className="p-6 rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-all"
             >
               <div className="flex flex-col items-center space-y-2">
-                {deviceType.icon}
-                <span className="font-medium">{deviceType.label}</span>
+                {category.icon && <img src={category.icon} alt={category.name} className="w-10 h-10" />}
+                <span className="font-medium">{category.name}</span>
               </div>
             </motion.button>
           ))}

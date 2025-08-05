@@ -97,15 +97,6 @@ async function main() {
     },
   });
 
-  const consoleCategory = await prisma.deviceCategory.create({
-    data: {
-      name: 'Gaming Consoles',
-      description: 'Gaming consoles and accessories',
-      icon: '🎮',
-      isActive: true,
-    },
-  });
-
   console.log('✅ Created device categories');
 
   // Create device brands
@@ -224,18 +215,6 @@ async function main() {
     },
   });
 
-  const ps5 = await prisma.deviceModel.create({
-    data: {
-      name: 'PlayStation 5',
-      modelNumber: 'CFI-1000',
-      releaseYear: 2020,
-      displayOrder: 7,
-      categoryId: consoleCategory.id,
-      brandId: sonyBrand.id,
-      isActive: true,
-    },
-  });
-
   console.log('✅ Created device models');
 
   // Create storage options for iPhone 15 Pro
@@ -290,13 +269,6 @@ async function main() {
     data: [
       { modelId: appleWatch.id, storage: '41mm', excellentPrice: 400.00, goodPrice: 320.00, fairPrice: 240.00, poorPrice: 160.00 },
       { modelId: appleWatch.id, storage: '45mm', excellentPrice: 450.00, goodPrice: 360.00, fairPrice: 270.00, poorPrice: 180.00 },
-    ],
-  });
-
-  // Create storage options for PS5
-  await prisma.deviceStorageOption.createMany({
-    data: [
-      { modelId: ps5.id, storage: '825GB', excellentPrice: 500.00, goodPrice: 400.00, fairPrice: 300.00, poorPrice: 200.00 },
     ],
   });
 
