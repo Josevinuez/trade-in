@@ -86,12 +86,10 @@ export default function StaffDeviceManagement() {
   const [storageOptions, setStorageOptions] = useState([
     {
       storage: '',
-      conditionPricing: {
-        excellent: '',
-        good: '',
-        fair: '',
-        poor: '',
-      }
+      excellentPrice: '',
+      goodPrice: '',
+      fairPrice: '',
+      poorPrice: '',
     }
   ]);
 
@@ -161,12 +159,10 @@ export default function StaffDeviceManagement() {
       ...storageOptions,
       {
         storage: '',
-        conditionPricing: {
-          excellent: '',
-          good: '',
-          fair: '',
-          poor: '',
-        }
+        excellentPrice: '',
+        goodPrice: '',
+        fairPrice: '',
+        poorPrice: '',
       }
     ]);
   };
@@ -179,21 +175,10 @@ export default function StaffDeviceManagement() {
 
   const updateStorageOption = (index: number, field: string, value: string) => {
     const newOptions = [...storageOptions];
-    if (field.includes('.')) {
-      const [mainField, subField] = field.split('.');
-      newOptions[index] = {
-        ...newOptions[index],
-        [mainField]: {
-          ...newOptions[index][mainField as keyof typeof newOptions[index]],
-          [subField]: value
-        }
-      } as any;
-    } else {
-      newOptions[index] = {
-        ...newOptions[index],
-        [field]: value
-      } as any;
-    }
+    newOptions[index] = {
+      ...newOptions[index],
+      [field]: value
+    } as any;
     setStorageOptions(newOptions);
   };
 
@@ -209,7 +194,10 @@ export default function StaffDeviceManagement() {
             .filter(opt => opt.storage !== '')
             .map(opt => ({
               storage: opt.storage,
-              conditionPricing: opt.conditionPricing,
+              excellentPrice: opt.excellentPrice,
+              goodPrice: opt.goodPrice,
+              fairPrice: opt.fairPrice,
+              poorPrice: opt.poorPrice,
             })),
         }),
       });
@@ -238,7 +226,10 @@ export default function StaffDeviceManagement() {
             .filter(opt => opt.storage !== '')
             .map(opt => ({
               storage: opt.storage,
-              conditionPricing: opt.conditionPricing,
+              excellentPrice: opt.excellentPrice,
+              goodPrice: opt.goodPrice,
+              fairPrice: opt.fairPrice,
+              poorPrice: opt.poorPrice,
             })),
         }),
       });
@@ -279,17 +270,13 @@ export default function StaffDeviceManagement() {
       brandId: '',
       displayOrder: 0,
     });
-    setStorageOptions([
-      {
-        storage: '',
-        conditionPricing: {
-          excellent: '',
-          good: '',
-          fair: '',
-          poor: '',
-        }
-      }
-    ]);
+    setStorageOptions([{
+      storage: '',
+      excellentPrice: '',
+      goodPrice: '',
+      fairPrice: '',
+      poorPrice: '',
+    }]);
   };
 
   const getCategoryIcon = (categoryName: string) => {
@@ -502,9 +489,9 @@ export default function StaffDeviceManagement() {
                           <Input
                             type="number"
                             step="0.01"
-                            value={option.conditionPricing.excellent}
+                            value={option.excellentPrice}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                              updateStorageOption(index, 'conditionPricing.excellent', e.target.value)
+                              updateStorageOption(index, 'excellentPrice', e.target.value)
                             }
                             placeholder="0.00"
                           />
@@ -514,9 +501,9 @@ export default function StaffDeviceManagement() {
                           <Input
                             type="number"
                             step="0.01"
-                            value={option.conditionPricing.good}
+                            value={option.goodPrice}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                              updateStorageOption(index, 'conditionPricing.good', e.target.value)
+                              updateStorageOption(index, 'goodPrice', e.target.value)
                             }
                             placeholder="0.00"
                           />
@@ -526,9 +513,9 @@ export default function StaffDeviceManagement() {
                           <Input
                             type="number"
                             step="0.01"
-                            value={option.conditionPricing.fair}
+                            value={option.fairPrice}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                              updateStorageOption(index, 'conditionPricing.fair', e.target.value)
+                              updateStorageOption(index, 'fairPrice', e.target.value)
                             }
                             placeholder="0.00"
                           />
@@ -538,9 +525,9 @@ export default function StaffDeviceManagement() {
                           <Input
                             type="number"
                             step="0.01"
-                            value={option.conditionPricing.poor}
+                            value={option.poorPrice}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                              updateStorageOption(index, 'conditionPricing.poor', e.target.value)
+                              updateStorageOption(index, 'poorPrice', e.target.value)
                             }
                             placeholder="0.00"
                           />
@@ -618,23 +605,19 @@ export default function StaffDeviceManagement() {
                         if (device.storageOptions && device.storageOptions.length > 0) {
                           const options = device.storageOptions.map(opt => ({
                             storage: opt.storage,
-                            conditionPricing: {
-                              excellent: opt.excellentPrice?.toString() || '',
-                              good: opt.goodPrice?.toString() || '',
-                              fair: opt.fairPrice?.toString() || '',
-                              poor: opt.poorPrice?.toString() || '',
-                            }
+                            excellentPrice: opt.excellentPrice?.toString() || '',
+                            goodPrice: opt.goodPrice?.toString() || '',
+                            fairPrice: opt.fairPrice?.toString() || '',
+                            poorPrice: opt.poorPrice?.toString() || '',
                           }));
                           setStorageOptions(options);
                         } else {
                           setStorageOptions([{
                             storage: '',
-                            conditionPricing: {
-                              excellent: '',
-                              good: '',
-                              fair: '',
-                              poor: '',
-                            }
+                            excellentPrice: '',
+                            goodPrice: '',
+                            fairPrice: '',
+                            poorPrice: '',
                           }]);
                         }
                       }}

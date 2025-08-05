@@ -1,12 +1,4 @@
 import { DeviceBuybackWidget } from '@/components/DeviceBuybackWidget';
-import { GetStaticPaths } from 'next';
-
-export const getStaticPaths: GetStaticPaths = async () => {
-  return {
-    paths: [],
-    fallback: false,
-  };
-};
 
 export default function TestWidgetPage() {
   return (

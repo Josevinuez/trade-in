@@ -74,14 +74,18 @@ interface DeviceModel {
   name: string;
   modelNumber?: string;
   releaseYear?: number;
-  basePrice: number;
+  imageUrl?: string;
+  displayOrder?: number;
   isActive: boolean;
   category: {
+    id: number;
     name: string;
   };
   brand: {
+    id: number;
     name: string;
   };
+  storageOptions?: any[];
 }
 
 export default function StaffDashboard() {
@@ -141,12 +145,10 @@ export default function StaffDashboard() {
   const [storageOptions, setStorageOptions] = useState([
     {
       storage: '',
-      conditionPricing: {
-        excellent: '',
-        good: '',
-        fair: '',
-        poor: '',
-      }
+      excellentPrice: '',
+      goodPrice: '',
+      fairPrice: '',
+      poorPrice: '',
     }
   ]);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -270,12 +272,10 @@ export default function StaffDashboard() {
       ...storageOptions,
       {
         storage: '',
-        conditionPricing: {
-          excellent: '',
-          good: '',
-          fair: '',
-          poor: '',
-        }
+        excellentPrice: '',
+        goodPrice: '',
+        fairPrice: '',
+        poorPrice: '',
       }
     ]);
   };
@@ -465,12 +465,10 @@ export default function StaffDashboard() {
     setStorageOptions([
       {
         storage: '',
-        conditionPricing: {
-          excellent: '',
-          good: '',
-          fair: '',
-          poor: '',
-        }
+        excellentPrice: '',
+        goodPrice: '',
+        fairPrice: '',
+        poorPrice: '',
       }
     ]);
   };
@@ -1888,8 +1886,8 @@ export default function StaffDashboard() {
                               <label className="block text-sm font-medium text-gray-700 mb-1">Excellent Price</label>
                               <input
                                 type="number"
-                                value={option.conditionPricing.excellent}
-                                onChange={(e) => updateStorageOption(index, 'conditionPricing.excellent', e.target.value)}
+                                value={option.excellentPrice}
+                                onChange={(e) => updateStorageOption(index, 'excellentPrice', e.target.value)}
                                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="0"
                               />
@@ -1899,8 +1897,8 @@ export default function StaffDashboard() {
                               <label className="block text-sm font-medium text-gray-700 mb-1">Good Price</label>
                               <input
                                 type="number"
-                                value={option.conditionPricing.good}
-                                onChange={(e) => updateStorageOption(index, 'conditionPricing.good', e.target.value)}
+                                value={option.goodPrice}
+                                onChange={(e) => updateStorageOption(index, 'goodPrice', e.target.value)}
                                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="0"
                               />
@@ -1910,8 +1908,8 @@ export default function StaffDashboard() {
                               <label className="block text-sm font-medium text-gray-700 mb-1">Fair Price</label>
                               <input
                                 type="number"
-                                value={option.conditionPricing.fair}
-                                onChange={(e) => updateStorageOption(index, 'conditionPricing.fair', e.target.value)}
+                                value={option.fairPrice}
+                                onChange={(e) => updateStorageOption(index, 'fairPrice', e.target.value)}
                                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="0"
                               />
@@ -1921,8 +1919,8 @@ export default function StaffDashboard() {
                               <label className="block text-sm font-medium text-gray-700 mb-1">Poor Price</label>
                               <input
                                 type="number"
-                                value={option.conditionPricing.poor}
-                                onChange={(e) => updateStorageOption(index, 'conditionPricing.poor', e.target.value)}
+                                value={option.poorPrice}
+                                onChange={(e) => updateStorageOption(index, 'poorPrice', e.target.value)}
                                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="0"
                               />
@@ -2097,12 +2095,10 @@ export default function StaffDashboard() {
                                   } else {
                                     setStorageOptions([{
                                       storage: '',
-                                      conditionPricing: {
-                                        excellent: '',
-                                        good: '',
-                                        fair: '',
-                                        poor: '',
-                                      }
+                                      excellentPrice: '',
+                                      goodPrice: '',
+                                      fairPrice: '',
+                                      poorPrice: '',
                                     }]);
                                   }
                                 }}
