@@ -50,6 +50,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   } catch (error: any) {
     console.error('Test error:', error);
-    res.status(500).json({ error: 'Test failed', details: error.message });
+    res.status(500).json({ error: 'Test failed', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 } 

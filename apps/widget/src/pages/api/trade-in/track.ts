@@ -56,6 +56,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json(orderStatus);
   } catch (error: any) {
     console.error('Order tracking error:', error);
-    return res.status(500).json({ error: 'Failed to track order', details: error.message });
+    return res.status(500).json({ error: 'Failed to track order', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 } 

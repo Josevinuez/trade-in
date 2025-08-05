@@ -86,7 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(200).json(model);
           } catch (error) {
             console.error('Device update error:', error);
-            return res.status(500).json({ error: 'Failed to update device', details: error.message });
+            return res.status(500).json({ error: 'Failed to update device', details: error instanceof Error ? error.message : 'Unknown error' });
           }
 
         default:
@@ -94,7 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     } catch (error) {
       console.error('Device update error:', error);
-      return res.status(500).json({ error: 'Failed to update device' });
+      return res.status(500).json({ error: 'Failed to update device', details: error instanceof Error ? error.message : 'Unknown error' });
     }
   }
 
@@ -131,19 +131,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('Deleted device:', deletedDevice.id);
 
       return res.status(200).json({ message: 'Device deleted successfully' });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Device deletion error:', error);
-      
-      // Check if it's a foreign key constraint error
-      if (error.code === 'P2003') {
-        return res.status(400).json({ 
-          error: 'Cannot delete device', 
-          details: 'This device has associated trade-in orders. Please delete the orders first or deactivate the device instead.',
-          code: 'FOREIGN_KEY_CONSTRAINT'
-        });
-      }
-      
-      return res.status(500).json({ error: 'Failed to delete device', details: error.message });
+      return res.status(500).json({ error: 'Failed to delete device', details: error instanceof Error ? error.message : 'Unknown error' });
     }
   }
 

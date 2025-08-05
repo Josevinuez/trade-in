@@ -32,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(200).json(brand);
           } catch (error: any) {
             console.error('Brand update error:', error);
-            return res.status(500).json({ error: 'Failed to update brand', details: error.message });
+            return res.status(500).json({ error: 'Failed to update brand', details: error instanceof Error ? error.message : 'Unknown error' });
           }
 
         default:
@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     } catch (error: any) {
       console.error('Brand update error:', error);
-      return res.status(500).json({ error: 'Failed to update brand' });
+      return res.status(500).json({ error: 'Failed to update brand', details: error instanceof Error ? error.message : 'Unknown error' });
     }
   }
 
@@ -82,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
-      return res.status(500).json({ error: 'Failed to delete brand', details: error.message });
+      return res.status(500).json({ error: 'Failed to delete brand', details: error instanceof Error ? error.message : 'Unknown error' });
     }
   }
 

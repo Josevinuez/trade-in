@@ -47,6 +47,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   } catch (error: any) {
     console.error('Debug error:', error);
-    res.status(500).json({ error: 'Debug failed', details: error.message });
+    res.status(500).json({ error: 'Debug failed', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 } 

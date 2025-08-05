@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json(clients);
     } catch (error: any) {
       console.error('Client fetch error:', error);
-      return res.status(500).json({ error: 'Failed to fetch clients', details: error.message });
+      return res.status(500).json({ error: 'Failed to fetch clients', details: error instanceof Error ? error.message : 'Unknown error' });
     }
   }
 
