@@ -1,10 +1,8 @@
 {
-  "buildCommand": "pnpm --filter @device-buyback/widget build",
-  "installCommand": "pnpm install",
-  "outputDirectory": "apps/widget/.next",
+  "outputDirectory": ".next",
   "framework": "nextjs",
   "functions": {
-    "apps/widget/.next/server/**/*.js": {
+    ".next/server/**/*.js": {
       "maxDuration": 30
     }
   }
