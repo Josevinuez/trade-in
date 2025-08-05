@@ -36,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       });
     } catch (error) {
-      manualCreate = { error: error.message };
+      manualCreate = { error: error instanceof Error ? error.message : 'Unknown error' };
     }
 
     res.status(200).json({
