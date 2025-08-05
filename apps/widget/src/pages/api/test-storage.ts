@@ -10,19 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Get all storage options
     const storageOptions = await prisma.deviceStorageOption.findMany({
       include: {
-        conditionPricing: {
-          include: {
-            condition: true
-          }
-        }
-      }
-    });
-
-    // Get all condition pricing
-    const conditionPricing = await prisma.storageConditionPricing.findMany({
-      include: {
-        condition: true,
-        storageOption: true
+        model: true
       }
     });
 
@@ -30,21 +18,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const device = await prisma.deviceModel.findFirst({
       where: { name: 'Debug Test' },
       include: {
-        storageOptions: {
-          include: {
-            conditionPricing: {
-              include: {
-                condition: true
-              }
-            }
-          }
-        }
+        storageOptions: true
       }
     });
 
     res.status(200).json({
       storageOptions,
-      conditionPricing,
       device
     });
 

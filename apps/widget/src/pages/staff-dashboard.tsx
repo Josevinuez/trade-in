@@ -288,21 +288,10 @@ export default function StaffDashboard() {
 
   const updateStorageOption = (index: number, field: string, value: string) => {
     const newOptions = [...storageOptions];
-    if (field.includes('.')) {
-      const [mainField, subField] = field.split('.');
-      newOptions[index] = {
-        ...newOptions[index],
-        [mainField]: {
-          ...newOptions[index][mainField as keyof typeof newOptions[index]],
-          [subField]: value
-        }
-      } as any;
-    } else {
-      newOptions[index] = {
-        ...newOptions[index],
-        [field]: value
-      } as any;
-    }
+    newOptions[index] = {
+      ...newOptions[index],
+      [field]: value
+    } as any;
     setStorageOptions(newOptions);
   };
 
@@ -318,7 +307,10 @@ export default function StaffDashboard() {
             .filter(opt => opt.storage !== '')
             .map(opt => ({
               storage: opt.storage,
-              conditionPricing: opt.conditionPricing,
+              excellentPrice: opt.excellentPrice,
+              goodPrice: opt.goodPrice,
+              fairPrice: opt.fairPrice,
+              poorPrice: opt.poorPrice,
             })),
         }),
       });
@@ -347,7 +339,10 @@ export default function StaffDashboard() {
             .filter(opt => opt.storage !== '')
             .map(opt => ({
               storage: opt.storage,
-              conditionPricing: opt.conditionPricing,
+              excellentPrice: opt.excellentPrice,
+              goodPrice: opt.goodPrice,
+              fairPrice: opt.fairPrice,
+              poorPrice: opt.poorPrice,
             })),
         }),
       });
@@ -2093,12 +2088,10 @@ export default function StaffDashboard() {
                                   if (device.storageOptions && device.storageOptions.length > 0) {
                                     const options = device.storageOptions.map((opt: any) => ({
                                       storage: opt.storage,
-                                      conditionPricing: {
-                                        excellent: opt.excellentPrice?.toString() || '',
-                                        good: opt.goodPrice?.toString() || '',
-                                        fair: opt.fairPrice?.toString() || '',
-                                        poor: opt.poorPrice?.toString() || '',
-                                      }
+                                      excellentPrice: opt.excellentPrice,
+                                      goodPrice: opt.goodPrice,
+                                      fairPrice: opt.fairPrice,
+                                      poorPrice: opt.poorPrice,
                                     }));
                                     setStorageOptions(options);
                                   } else {
