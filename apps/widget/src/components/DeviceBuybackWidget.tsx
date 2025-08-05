@@ -357,25 +357,31 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-center">Select storage capacity</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {selectedDeviceModel?.storageOptions.map((option) => (
-                <motion.button
-                  key={option.storage}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleStorageSelect(option.storage)}
-                  className={`p-6 rounded-lg border-2 transition-all ${
-                    selectedStorage === option.storage
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex flex-col items-center space-y-2">
-                    <span className="font-medium">{option.storage}</span>
-                  </div>
-                </motion.button>
-              ))}
-            </div>
+            {selectedDeviceModel?.storageOptions && selectedDeviceModel.storageOptions.length > 0 ? (
+              <div className="grid grid-cols-2 gap-4">
+                {selectedDeviceModel.storageOptions.map((option) => (
+                  <motion.button
+                    key={option.storage}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleStorageSelect(option.storage)}
+                    className={`p-6 rounded-lg border-2 transition-all ${
+                      selectedStorage === option.storage
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center space-y-2">
+                      <span className="font-medium">{option.storage}</span>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No storage options available for this device.</p>
+              </div>
+            )}
           </div>
         );
 

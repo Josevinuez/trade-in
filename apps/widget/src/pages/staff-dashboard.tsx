@@ -553,6 +553,7 @@ export default function StaffDashboard() {
       imageUrl: '',
       isActive: true,
     });
+    // Keep at least one storage option when adding new device
     setStorageOptions([
       {
         storage: '',
@@ -562,6 +563,8 @@ export default function StaffDashboard() {
         poorPrice: '',
       }
     ]);
+    setEditingDevice(null);
+    setShowAddForm(false);
   };
 
   const getCategoryIcon = (categoryName: string) => {

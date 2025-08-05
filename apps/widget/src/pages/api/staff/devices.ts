@@ -34,7 +34,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 category: true,
                 brand: true,
                 storageOptions: {
-                  where: { isActive: true },
                   orderBy: { storage: 'asc' }
                 },
               },
@@ -62,7 +61,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 category: true,
                 brand: true,
                 storageOptions: {
-                  where: { isActive: true },
                   orderBy: { storage: 'asc' }
                 },
               },
