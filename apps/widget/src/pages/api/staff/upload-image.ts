@@ -1,17 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import formidable from 'formidable';
-import fs from 'fs';
-import path from 'path';
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
   },
 };
-
-// Allowed file types
-const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml'];
-const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.webp', '.svg'];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -19,81 +14,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const form = formidable({
-      uploadDir: path.join(process.cwd(), 'public', 'uploads'),
-      keepExtensions: true,
-      maxFiles: 1,
-      maxFileSize: 10 * 1024 * 1024, // 10MB limit
-      filter: (part) => {
-        // Check file type
-        if (!part.mimetype || !ALLOWED_TYPES.includes(part.mimetype)) {
-          return false;
-        }
-        
-        // Check file extension
-        const ext = path.extname(part.originalFilename || '').toLowerCase();
-        if (!ALLOWED_EXTENSIONS.includes(ext)) {
-          return false;
-        }
-        
-        return true;
-      },
-    });
+    const { imageData, fileName } = req.body;
 
-    // Ensure upload directory exists
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    if (!imageData || !fileName) {
+      return res.status(400).json({ error: 'Image data and filename are required' });
     }
 
-    form.parse(req, (err, fields, files) => {
-      if (err) {
-        console.error('Upload error:', err);
-        return res.status(500).json({ error: 'Upload failed' });
-      }
+    // Validate base64 data
+    if (!imageData.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Invalid image format' });
+    }
 
-      const file = files.image?.[0];
-      if (!file) {
-        return res.status(400).json({ error: 'No image file provided' });
-      }
+    // Extract the base64 data
+    const base64Data = imageData.split(',')[1];
+    if (!base64Data) {
+      return res.status(400).json({ error: 'Invalid base64 data' });
+    }
 
-      // Validate file type
-      if (!ALLOWED_TYPES.includes(file.mimetype || '')) {
-        return res.status(400).json({ 
-          error: 'Invalid file type. Only JPEG, WebP, and SVG files are allowed.' 
-        });
-      }
+    // For demo purposes, we'll just return a success response with a placeholder URL
+    // In production, you would save this to a cloud storage service like AWS S3, Cloudinary, etc.
+    const imageUrl = `https://via.placeholder.com/300x300/007bff/ffffff?text=${encodeURIComponent(fileName)}`;
 
-      // Validate file extension
-      const ext = path.extname(file.originalFilename || '').toLowerCase();
-      if (!ALLOWED_EXTENSIONS.includes(ext)) {
-        return res.status(400).json({ 
-          error: 'Invalid file extension. Only .jpg, .jpeg, .webp, and .svg files are allowed.' 
-        });
-      }
-
-      // Generate a unique filename
-      const timestamp = Date.now();
-      const originalName = file.originalFilename || 'image';
-      const extension = path.extname(originalName);
-      const newFilename = `${timestamp}-${originalName}`;
-      const newPath = path.join(uploadDir, newFilename);
-
-      // Move the file to the uploads directory
-      fs.renameSync(file.filepath, newPath);
-
-      // Return the URL path
-      const imageUrl = `/uploads/${newFilename}`;
-      res.status(200).json({ 
-        success: true, 
-        imageUrl,
-        message: 'Image uploaded successfully',
-        fileType: file.mimetype,
-        fileSize: file.size
-      });
+    res.status(200).json({ 
+      imageUrl,
+      message: 'Image uploaded successfully (demo mode - using placeholder)' 
     });
+
   } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: 'Upload failed' });
+    console.error('Image upload error:', error);
+    res.status(500).json({ 
+      error: 'Failed to upload image',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 } 

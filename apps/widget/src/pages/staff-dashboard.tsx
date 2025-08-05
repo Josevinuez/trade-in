@@ -275,26 +275,46 @@ export default function StaffDashboard() {
   const handleImageUpload = async (file: File) => {
     setUploadingImage(true);
     try {
-      const formData = new FormData();
-      formData.append('image', file);
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const imageData = e.target?.result as string;
+          
+          const response = await fetch('/api/staff/upload-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              imageData,
+              fileName: file.name,
+            }),
+          });
 
-      const response = await fetch('/api/staff/upload-image', {
-        method: 'POST',
-        body: formData,
-      });
+          if (response.ok) {
+            const result = await response.json();
+            setFormData(prev => ({ ...prev, imageUrl: result.imageUrl }));
+            showNotificationModal('success', 'Success', 'Image uploaded successfully!');
+          } else {
+            const errorData = await response.json();
+            showNotificationModal('error', 'Error', `Failed to upload image: ${errorData.error || 'Unknown error'}`);
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          showNotificationModal('error', 'Error', 'Failed to upload image. Please try again.');
+        } finally {
+          setUploadingImage(false);
+        }
+      };
 
-      if (response.ok) {
-        const result = await response.json();
-        setFormData(prev => ({ ...prev, imageUrl: result.imageUrl }));
-        showNotificationModal('success', 'Success', 'Image uploaded successfully!');
-      } else {
-        const errorData = await response.json();
-        showNotificationModal('error', 'Error', `Failed to upload image: ${errorData.error || 'Unknown error'}`);
-      }
+      reader.onerror = () => {
+        showNotificationModal('error', 'Error', 'Failed to read image file.');
+        setUploadingImage(false);
+      };
+
+      reader.readAsDataURL(file);
     } catch (error) {
       console.error('Upload error:', error);
       showNotificationModal('error', 'Error', 'Failed to upload image. Please try again.');
-    } finally {
       setUploadingImage(false);
     }
   };

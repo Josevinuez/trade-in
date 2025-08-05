@@ -82,7 +82,7 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
         
         if (modelsResponse.ok) {
           const modelsData = await modelsResponse.json();
-          setDeviceModels(modelsData.devices || []);
+          setDeviceModels(modelsData.models || []);
         }
         
         if (conditionsResponse.ok) {
