@@ -64,21 +64,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('Saving file:', { filePath, uniqueFileName });
 
-    // Convert base64 to buffer and save file
-    const buffer = Buffer.from(base64Data, 'base64');
-    fs.writeFileSync(filePath, buffer);
+    try {
+      // Convert base64 to buffer and save file
+      const buffer = Buffer.from(base64Data, 'base64');
+      fs.writeFileSync(filePath, buffer);
 
-    console.log('File saved successfully:', { filePath, fileSize: buffer.length });
+      console.log('File saved successfully:', { filePath, fileSize: buffer.length });
 
-    // Return the public URL
-    const imageUrl = `/uploads/${uniqueFileName}`;
+      // Return the public URL
+      const imageUrl = `/uploads/${uniqueFileName}`;
 
-    res.status(200).json({ 
-      imageUrl,
-      message: 'Image uploaded successfully',
-      fileName: uniqueFileName,
-      fileSize: buffer.length
-    });
+      res.status(200).json({ 
+        imageUrl,
+        message: 'Image uploaded successfully',
+        fileName: uniqueFileName,
+        fileSize: buffer.length
+      });
+    } catch (writeError) {
+      console.error('File write error:', writeError);
+      res.status(500).json({ 
+        error: 'Failed to save image file',
+        details: writeError instanceof Error ? writeError.message : 'Unknown error'
+      });
+    }
 
   } catch (error) {
     console.error('Image upload error:', error);
