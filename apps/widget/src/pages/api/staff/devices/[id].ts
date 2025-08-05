@@ -55,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               // Create new storage options
               for (const option of storageOptions) {
                 console.log('Processing option:', option);
-                if (option.storage && option.conditionPricing) {
+                if (option.storage) {
                   console.log('Creating storage option:', option.storage);
                   
                   try {
@@ -64,10 +64,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                       data: {
                         modelId: parseInt(id as string),
                         storage: option.storage,
-                        excellentPrice: parseFloat(option.conditionPricing.excellent || '0'),
-                        goodPrice: parseFloat(option.conditionPricing.good || '0'),
-                        fairPrice: parseFloat(option.conditionPricing.fair || '0'),
-                        poorPrice: parseFloat(option.conditionPricing.poor || '0'),
+                        excellentPrice: option.excellentPrice ? parseFloat(option.excellentPrice) : 0,
+                        goodPrice: option.goodPrice ? parseFloat(option.goodPrice) : 0,
+                        fairPrice: option.fairPrice ? parseFloat(option.fairPrice) : 0,
+                        poorPrice: option.poorPrice ? parseFloat(option.poorPrice) : 0,
+                        isActive: true,
                       }
                     });
 
@@ -76,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     console.error('Storage option creation failed:', storageError);
                   }
                 } else {
-                  console.log('Skipping option - missing storage or conditionPricing');
+                  console.log('Skipping option - missing storage');
                 }
               }
             } else {

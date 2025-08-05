@@ -335,7 +335,8 @@ export default function StaffDashboard() {
   };
 
   const addStorageOption = () => {
-    setStorageOptions([
+    console.log('Adding storage option. Current options:', storageOptions);
+    const newOptions = [
       ...storageOptions,
       {
         storage: '',
@@ -344,21 +345,27 @@ export default function StaffDashboard() {
         fairPrice: '',
         poorPrice: '',
       }
-    ]);
+    ];
+    console.log('New options:', newOptions);
+    setStorageOptions(newOptions);
   };
 
   const removeStorageOption = (index: number) => {
     if (storageOptions.length > 1) {
-      setStorageOptions(storageOptions.filter((_, i) => i !== index));
+      const newOptions = storageOptions.filter((_, i) => i !== index);
+      console.log('Removing storage option at index', index, 'New options:', newOptions);
+      setStorageOptions(newOptions);
     }
   };
 
   const updateStorageOption = (index: number, field: string, value: string) => {
+    console.log('Updating storage option:', { index, field, value, currentOptions: storageOptions });
     const newOptions = [...storageOptions];
     newOptions[index] = {
       ...newOptions[index],
       [field]: value
-    } as any;
+    };
+    console.log('Updated options:', newOptions);
     setStorageOptions(newOptions);
   };
 
@@ -420,31 +427,45 @@ export default function StaffDashboard() {
     if (!editingDevice) return;
 
     try {
+      const requestData = {
+        type: 'model',
+        data: formData,
+        storageOptions: storageOptions
+          .filter(opt => opt.storage !== '')
+          .map(opt => ({
+            storage: opt.storage,
+            excellentPrice: opt.excellentPrice,
+            goodPrice: opt.goodPrice,
+            fairPrice: opt.fairPrice,
+            poorPrice: opt.poorPrice,
+          })),
+      };
+
+      console.log('Updating device with data:', requestData);
+
       const response = await fetch(`/api/staff/devices/${editingDevice.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'model',
-          data: formData,
-          storageOptions: storageOptions
-            .filter(opt => opt.storage !== '')
-            .map(opt => ({
-              storage: opt.storage,
-              excellentPrice: opt.excellentPrice,
-              goodPrice: opt.goodPrice,
-              fairPrice: opt.fairPrice,
-              poorPrice: opt.poorPrice,
-            })),
-        }),
+        body: JSON.stringify(requestData),
       });
 
+      console.log('Update response status:', response.status);
+
       if (response.ok) {
+        const result = await response.json();
+        console.log('Device updated successfully:', result);
         setEditingDevice(null);
         resetForm();
         fetchDeviceManagementData();
+        showNotificationModal('success', 'Success', 'Device updated successfully!');
+      } else {
+        const errorData = await response.json();
+        console.error('Update error response:', errorData);
+        showNotificationModal('error', 'Error', `Failed to update device: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error updating device:', error);
+      showNotificationModal('error', 'Error', 'Failed to update device. Please try again.');
     }
   };
 
