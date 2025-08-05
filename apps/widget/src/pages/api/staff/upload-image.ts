@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
-import path from 'path';
+import { put } from '@vercel/blob';
 
 export const config = {
   api: {
@@ -30,7 +29,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid image format' });
     }
 
-    // Extract the base64 data and mime type
     const matches = imageData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
     if (!matches || matches.length !== 3) {
       console.log('Invalid base64 data format');
@@ -39,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const mimeType = matches[1];
     const base64Data = matches[2];
-
+    
     console.log('Processing image:', { fileName, mimeType, dataLength: base64Data.length });
 
     // Validate mime type
@@ -49,42 +47,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid image type. Only JPEG, PNG, WebP, and SVG are allowed.' });
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      console.log('Creating uploads directory:', uploadsDir);
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
     // Generate unique filename
     const timestamp = Date.now();
     const extension = mimeType.split('/')[1];
     const uniqueFileName = `${timestamp}-${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    const filePath = path.join(uploadsDir, uniqueFileName);
-
-    console.log('Saving file:', { filePath, uniqueFileName });
+    
+    console.log('Uploading to Vercel Blob:', { uniqueFileName, mimeType });
 
     try {
-      // Convert base64 to buffer and save file
+      // Convert base64 to buffer
       const buffer = Buffer.from(base64Data, 'base64');
-      fs.writeFileSync(filePath, buffer);
+      
+      // Upload to Vercel Blob
+      const { url } = await put(uniqueFileName, buffer, {
+        access: 'public',
+        contentType: mimeType,
+      });
 
-      console.log('File saved successfully:', { filePath, fileSize: buffer.length });
-
-      // Return the public URL
-      const imageUrl = `/uploads/${uniqueFileName}`;
+      console.log('Upload successful to Vercel Blob:', { url, fileSize: buffer.length });
 
       res.status(200).json({ 
-        imageUrl,
+        imageUrl: url,
         message: 'Image uploaded successfully',
         fileName: uniqueFileName,
         fileSize: buffer.length
       });
-    } catch (writeError) {
-      console.error('File write error:', writeError);
+    } catch (uploadError) {
+      console.error('Vercel Blob upload error:', uploadError);
       res.status(500).json({ 
-        error: 'Failed to save image file',
-        details: writeError instanceof Error ? writeError.message : 'Unknown error'
+        error: 'Failed to upload image to blob storage',
+        details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
       });
     }
 

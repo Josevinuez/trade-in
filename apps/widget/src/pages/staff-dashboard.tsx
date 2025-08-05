@@ -655,23 +655,54 @@ export default function StaffDashboard() {
   const handleBrandLogoUpload = async (file: File) => {
     setUploadingBrandLogo(true);
     try {
-      const formData = new FormData();
-      formData.append('image', file);
+      console.log('Starting brand logo upload for file:', file.name, file.size, file.type);
+      
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const imageData = e.target?.result as string;
+          console.log('File converted to base64, length:', imageData.length);
+          
+          const response = await fetch('/api/staff/upload-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              imageData,
+              fileName: file.name,
+            }),
+          });
 
-      const response = await fetch('/api/staff/upload-image', {
-        method: 'POST',
-        body: formData,
-      });
+          console.log('Upload response status:', response.status);
+          
+          if (response.ok) {
+            const result = await response.json();
+            console.log('Upload successful:', result);
+            setBrandFormData(prev => ({ ...prev, logoUrl: result.imageUrl }));
+            showNotificationModal('success', 'Success', 'Logo uploaded successfully!');
+          } else {
+            const errorData = await response.json();
+            console.error('Upload failed:', errorData);
+            showNotificationModal('error', 'Error', `Failed to upload logo: ${errorData.error || 'Unknown error'}`);
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          showNotificationModal('error', 'Error', 'Failed to upload logo. Please try again.');
+        } finally {
+          setUploadingBrandLogo(false);
+        }
+      };
 
-      if (response.ok) {
-        const data = await response.json();
-        setBrandFormData({ ...brandFormData, logoUrl: data.imageUrl });
-      } else {
-        console.error('Failed to upload brand logo');
-      }
+      reader.onerror = () => {
+        console.error('FileReader error');
+        showNotificationModal('error', 'Error', 'Failed to read logo file.');
+        setUploadingBrandLogo(false);
+      };
+
+      reader.readAsDataURL(file);
     } catch (error) {
-      console.error('Error uploading brand logo:', error);
-    } finally {
+      console.error('Upload error:', error);
+      showNotificationModal('error', 'Error', 'Failed to upload logo. Please try again.');
       setUploadingBrandLogo(false);
     }
   };
