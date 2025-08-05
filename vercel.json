@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm --filter @device-buyback/types build && cd apps/widget && npx prisma generate && pnpm build",
+  "buildCommand": "pnpm --filter @device-buyback/types build && pnpm --filter @device-buyback/widget build",
   "installCommand": "pnpm install",
   "outputDirectory": "apps/widget/.next",
   "framework": "nextjs",
