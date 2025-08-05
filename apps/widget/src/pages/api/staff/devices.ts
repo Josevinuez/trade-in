@@ -123,15 +123,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           console.log('Storage options:', storageOptions);
           
           try {
+            // Validate required fields
+            if (!deviceData.name || !deviceData.categoryId || !deviceData.brandId) {
+              return res.status(400).json({ 
+                error: 'Missing required fields', 
+                details: 'Name, category, and brand are required' 
+              });
+            }
+
             const model = await prisma.deviceModel.create({
               data: {
                 name: deviceData.name,
-                modelNumber: deviceData.modelNumber,
-                releaseYear: parseInt(deviceData.releaseYear),
+                modelNumber: deviceData.modelNumber || null,
+                releaseYear: deviceData.releaseYear ? parseInt(deviceData.releaseYear) : null,
                 imageUrl: deviceData.imageUrl || null,
                 categoryId: parseInt(deviceData.categoryId),
                 brandId: parseInt(deviceData.brandId),
-                displayOrder: parseInt(deviceData.displayOrder) || 0,
+                displayOrder: deviceData.displayOrder ? parseInt(deviceData.displayOrder) : 0,
+                isActive: true,
               },
               include: {
                 category: true,
@@ -147,7 +156,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               
               for (const option of storageOptions) {
                 console.log('Processing option:', option);
-                if (option.storage && option.conditionPricing) {
+                if (option.storage) {
                   console.log('Creating storage option:', option.storage);
                   
                   try {
@@ -156,10 +165,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                       data: {
                         modelId: model.id,
                         storage: option.storage,
-                        excellentPrice: parseFloat(option.conditionPricing.excellent || '0'),
-                        goodPrice: parseFloat(option.conditionPricing.good || '0'),
-                        fairPrice: parseFloat(option.conditionPricing.fair || '0'),
-                        poorPrice: parseFloat(option.conditionPricing.poor || '0'),
+                        excellentPrice: option.excellentPrice ? parseFloat(option.excellentPrice) : 0,
+                        goodPrice: option.goodPrice ? parseFloat(option.goodPrice) : 0,
+                        fairPrice: option.fairPrice ? parseFloat(option.fairPrice) : 0,
+                        poorPrice: option.poorPrice ? parseFloat(option.poorPrice) : 0,
+                        isActive: true,
                       }
                     });
 
@@ -168,7 +178,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     console.error('Storage option creation failed:', storageError);
                   }
                 } else {
-                  console.log('Skipping option - missing storage or conditionPricing');
+                  console.log('Skipping option - missing storage');
                 }
               }
             } else {

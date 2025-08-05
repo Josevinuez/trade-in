@@ -297,6 +297,20 @@ export default function StaffDashboard() {
 
   const handleAddDevice = async () => {
     try {
+      console.log('Submitting device data:', {
+        type: 'model',
+        data: formData,
+        storageOptions: storageOptions
+          .filter(opt => opt.storage !== '')
+          .map(opt => ({
+            storage: opt.storage,
+            excellentPrice: opt.excellentPrice,
+            goodPrice: opt.goodPrice,
+            fairPrice: opt.fairPrice,
+            poorPrice: opt.poorPrice,
+          })),
+      });
+
       const response = await fetch('/api/staff/devices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -315,13 +329,23 @@ export default function StaffDashboard() {
         }),
       });
 
+      console.log('Response status:', response.status);
+      
       if (response.ok) {
+        const result = await response.json();
+        console.log('Device created successfully:', result);
         setShowAddForm(false);
         resetForm();
         fetchDeviceManagementData();
+        showNotificationModal('success', 'Success', 'Device added successfully!');
+      } else {
+        const errorData = await response.json();
+        console.error('Error response:', errorData);
+        showNotificationModal('error', 'Error', `Failed to add device: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error adding device:', error);
+      showNotificationModal('error', 'Error', 'Failed to add device. Please try again.');
     }
   };
 
