@@ -275,11 +275,14 @@ export default function StaffDashboard() {
   const handleImageUpload = async (file: File) => {
     setUploadingImage(true);
     try {
+      console.log('Starting image upload for file:', file.name, file.size, file.type);
+      
       // Convert file to base64
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
           const imageData = e.target?.result as string;
+          console.log('File converted to base64, length:', imageData.length);
           
           const response = await fetch('/api/staff/upload-image', {
             method: 'POST',
@@ -290,12 +293,16 @@ export default function StaffDashboard() {
             }),
           });
 
+          console.log('Upload response status:', response.status);
+          
           if (response.ok) {
             const result = await response.json();
+            console.log('Upload successful:', result);
             setFormData(prev => ({ ...prev, imageUrl: result.imageUrl }));
             showNotificationModal('success', 'Success', 'Image uploaded successfully!');
           } else {
             const errorData = await response.json();
+            console.error('Upload failed:', errorData);
             showNotificationModal('error', 'Error', `Failed to upload image: ${errorData.error || 'Unknown error'}`);
           }
         } catch (error) {
@@ -307,6 +314,7 @@ export default function StaffDashboard() {
       };
 
       reader.onerror = () => {
+        console.error('FileReader error');
         showNotificationModal('error', 'Error', 'Failed to read image file.');
         setUploadingImage(false);
       };
