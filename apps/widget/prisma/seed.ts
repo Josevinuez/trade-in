@@ -465,6 +465,33 @@ async function main() {
 
   console.log('✅ Created sample trade-in orders');
 
+  // Create payment methods
+  const eTransferMethod = await prisma.paymentMethod.create({
+    data: {
+      name: 'E-Transfer',
+      description: 'Electronic money transfer',
+      isActive: true,
+    },
+  });
+
+  const paypalMethod = await prisma.paymentMethod.create({
+    data: {
+      name: 'PayPal',
+      description: 'PayPal payment',
+      isActive: true,
+    },
+  });
+
+  const chequeMethod = await prisma.paymentMethod.create({
+    data: {
+      name: 'Cheque',
+      description: 'Physical cheque payment',
+      isActive: true,
+    },
+  });
+
+  console.log('✅ Created payment methods');
+
   // Create sample shipping labels
   await prisma.shippingLabel.create({
     data: {
@@ -488,7 +515,7 @@ async function main() {
   await prisma.payment.create({
     data: {
       orderId: order1.id,
-      paymentMethodId: 1, // Assuming first payment method
+      paymentMethodId: eTransferMethod.id,
       amount: 1200.00,
       status: 'COMPLETED',
       processedAt: new Date('2024-01-20'),
@@ -498,7 +525,7 @@ async function main() {
   await prisma.payment.create({
     data: {
       orderId: order2.id,
-      paymentMethodId: 2, // Assuming second payment method
+      paymentMethodId: paypalMethod.id,
       amount: 720.00,
       status: 'PENDING',
     },
