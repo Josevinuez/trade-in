@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from '../../../../lib/database';
+import { supabaseAdmin } from '../../../utils/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -14,26 +14,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Find the order by email and order number
-    const order = await prisma.tradeInOrder.findFirst({
-      where: {
-        orderNumber: orderNumber,
-        customer: {
-          email: email
-        }
-      },
-      include: {
-        customer: true,
-        deviceModel: {
-          include: {
-            brand: true,
-            category: true,
-          }
-        },
-        deviceCondition: true,
-      }
-    });
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('TradeInOrder')
+      .select(`
+        *,
+        customer:Customer(*),
+        deviceModel:DeviceModel(
+          *,
+          brand:DeviceBrand(*),
+          category:DeviceCategory(*)
+        ),
+        deviceCondition:DeviceCondition(*)
+      `)
+      .eq('orderNumber', orderNumber)
+      .eq('customer.email', email)
+      .single();
 
-    if (!order) {
+    if (orderError || !order) {
       return res.status(404).json({ error: 'Order not found. Please check your email and order number.' });
     }
 
@@ -44,9 +41,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       status: order.status,
       quotedAmount: parseFloat(order.quotedAmount.toString()),
       finalAmount: order.finalAmount ? parseFloat(order.finalAmount.toString()) : undefined,
-      submittedAt: order.submittedAt.toISOString(),
-      processedAt: order.processedAt ? order.processedAt.toISOString() : undefined,
-      completedAt: order.completedAt ? order.completedAt.toISOString() : undefined,
+      submittedAt: order.submittedAt,
+      processedAt: order.processedAt || undefined,
+      completedAt: order.completedAt || undefined,
       customerName: `${order.customer.firstName} ${order.customer.lastName}`.trim(),
       deviceModel: `${order.deviceModel.brand.name} ${order.deviceModel.name}`,
       deviceCondition: order.deviceCondition.name,

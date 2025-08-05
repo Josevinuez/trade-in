@@ -94,13 +94,14 @@ export default function StaffDashboard() {
   const [activeTab, setActiveTab] = useState<'orders' | 'clients' | 'management' | 'brands'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [devices, setDevices] = useState<DeviceModel[]>([]);
+  const [deviceConditions, setDeviceConditions] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   
   // Device management state
-  const [categories, setCategories] = useState<any[]>([]);
-  const [brands, setBrands] = useState<any[]>([]);
   const [conditions, setConditions] = useState<any[]>([]);
   const [deviceSearchTerm, setDeviceSearchTerm] = useState('');
   
@@ -165,6 +166,38 @@ export default function StaffDashboard() {
   const [notificationTitle, setNotificationTitle] = useState('');
   const [notificationMessage, setNotificationMessage] = useState('');
   
+  // Order creation state
+  const [showAddOrderForm, setShowAddOrderForm] = useState(false);
+  const [orderFormData, setOrderFormData] = useState({
+    customerEmail: '',
+    customerName: '',
+    customerPhone: '',
+    customerAddress: '',
+    customerCity: '',
+    customerProvince: '',
+    customerPostalCode: '',
+    deviceModelId: '',
+    deviceConditionId: '',
+    storageOptionId: '',
+    quotedAmount: '',
+    paymentMethod: 'e-transfer',
+    notes: '',
+  });
+
+  // Client management state
+  const [showAddClientForm, setShowAddClientForm] = useState(false);
+  const [editingClient, setEditingClient] = useState<any>(null);
+  const [clientFormData, setClientFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    addressLine1: '',
+    city: '',
+    province: '',
+    postalCode: '',
+  });
+
   // Categories management
   const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
@@ -252,28 +285,32 @@ export default function StaffDashboard() {
   // Device management functions
   const fetchDeviceManagementData = async () => {
     try {
-      console.log('Fetching device management data...');
-      
-      const [devicesRes, categoriesRes, brandsRes, conditionsRes] = await Promise.all([
-        fetch('/api/staff/devices?type=models'),
+      const [categoriesResponse, brandsResponse, conditionsResponse, modelsResponse] = await Promise.all([
         fetch('/api/staff/devices?type=categories'),
         fetch('/api/staff/devices?type=brands'),
         fetch('/api/staff/devices?type=conditions'),
+        fetch('/api/staff/devices?type=models')
       ]);
 
-      const devicesData = await devicesRes.json();
-      const categoriesData = await categoriesRes.json();
-      const brandsData = await brandsRes.json();
-      const conditionsData = await conditionsRes.json();
+      if (categoriesResponse.ok) {
+        const categoriesData = await categoriesResponse.json();
+        setCategories(categoriesData);
+      }
 
-      console.log('Categories data:', categoriesData);
-      console.log('Brands data:', brandsData);
-      console.log('Conditions data:', conditionsData);
+      if (brandsResponse.ok) {
+        const brandsData = await brandsResponse.json();
+        setBrands(brandsData);
+      }
 
-      setDevices(devicesData);
-      setCategories(categoriesData);
-      setBrands(brandsData);
-      setConditions(conditionsData);
+      if (conditionsResponse.ok) {
+        const conditionsData = await conditionsResponse.json();
+        setDeviceConditions(conditionsData);
+      }
+
+      if (modelsResponse.ok) {
+        const modelsData = await modelsResponse.json();
+        setDevices(modelsData);
+      }
     } catch (error) {
       console.error('Error fetching device management data:', error);
     }
@@ -897,7 +934,7 @@ export default function StaffDashboard() {
       const response = await fetch('/api/staff/clients');
       if (response.ok) {
         const data = await response.json();
-        setClients(data);
+        setClients(data.clients || []);
       } else {
         console.error('Failed to fetch clients');
       }
@@ -917,10 +954,168 @@ export default function StaffDashboard() {
     setSelectedClient(null);
   };
 
+  // Order creation functions
+  const handleAddOrder = async () => {
+    try {
+      const response = await fetch('/api/staff/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderFormData),
+      });
 
+      if (response.ok) {
+        const data = await response.json();
+        setOrders([data.order, ...orders]);
+        setShowAddOrderForm(false);
+        resetOrderForm();
+        showNotificationModal('success', 'Success', 'Order created successfully!');
+      } else {
+        const errorData = await response.json();
+        showNotificationModal('error', 'Error', `Failed to create order: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error creating order:', error);
+      showNotificationModal('error', 'Error', 'Failed to create order. Please try again.');
+    }
+  };
+
+  const resetOrderForm = () => {
+    setOrderFormData({
+      customerEmail: '',
+      customerName: '',
+      customerPhone: '',
+      customerAddress: '',
+      customerCity: '',
+      customerProvince: '',
+      customerPostalCode: '',
+      deviceModelId: '',
+      deviceConditionId: '',
+      storageOptionId: '',
+      quotedAmount: '',
+      paymentMethod: 'e-transfer',
+      notes: '',
+    });
+  };
+
+  // Client management functions
+  const handleAddClient = async () => {
+    try {
+      const response = await fetch('/api/staff/clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(clientFormData),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setClients([data.customer, ...clients]);
+        setShowAddClientForm(false);
+        resetClientForm();
+        showNotificationModal('success', 'Success', 'Client created successfully!');
+      } else {
+        const errorData = await response.json();
+        showNotificationModal('error', 'Error', `Failed to create client: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error creating client:', error);
+      showNotificationModal('error', 'Error', 'Failed to create client. Please try again.');
+    }
+  };
+
+  const handleUpdateClient = async () => {
+    if (!editingClient) return;
+
+    try {
+      const response = await fetch('/api/staff/clients', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: editingClient.id,
+          ...clientFormData,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setClients(clients.map(client => 
+          client.id === editingClient.id ? data.customer : client
+        ));
+        setEditingClient(null);
+        resetClientForm();
+        showNotificationModal('success', 'Success', 'Client updated successfully!');
+      } else {
+        const errorData = await response.json();
+        showNotificationModal('error', 'Error', `Failed to update client: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating client:', error);
+      showNotificationModal('error', 'Error', 'Failed to update client. Please try again.');
+    }
+  };
+
+  const handleDeleteClient = async (clientId: number) => {
+    setConfirmTitle('Delete Client');
+    setConfirmMessage('Are you sure you want to delete this client? This action cannot be undone.');
+    setConfirmAction(() => async () => {
+      try {
+        const response = await fetch('/api/staff/clients', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ id: clientId }),
+        });
+
+        if (response.ok) {
+          setClients(clients.filter(client => client.id !== clientId));
+          showNotificationModal('success', 'Success', 'Client deleted successfully!');
+        } else {
+          const errorData = await response.json();
+          showNotificationModal('error', 'Error', `Failed to delete client: ${errorData.error || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error('Error deleting client:', error);
+        showNotificationModal('error', 'Error', 'Failed to delete client. Please try again.');
+      }
+    });
+    setShowConfirmModal(true);
+  };
+
+  const handleEditClient = (client: any) => {
+    setEditingClient(client);
+    setClientFormData({
+      firstName: client.firstName || '',
+      lastName: client.lastName || '',
+      email: client.email || '',
+      phone: client.phone || '',
+      addressLine1: client.addressLine1 || '',
+      city: client.city || '',
+      province: client.province || '',
+      postalCode: client.postalCode || '',
+    });
+  };
+
+  const resetClientForm = () => {
+    setClientFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      addressLine1: '',
+      city: '',
+      province: '',
+      postalCode: '',
+    });
+  };
 
   // Filter clients based on search term
-  const filteredClients = clients.filter(client => {
+  const filteredClients = (clients || []).filter(client => {
     const searchLower = clientSearchTerm.toLowerCase();
     return (
       client.firstName.toLowerCase().includes(searchLower) ||
@@ -935,7 +1130,7 @@ export default function StaffDashboard() {
   });
 
   // Filter devices based on search term
-  const filteredDevices = devices.filter(device => {
+  const filteredDevices = (devices || []).filter(device => {
     const searchLower = deviceSearchTerm.toLowerCase();
     return (
       device.name.toLowerCase().includes(searchLower) ||
@@ -945,7 +1140,7 @@ export default function StaffDashboard() {
     );
   });
 
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = (orders || []).filter(order => {
     const matchesSearch = 
       order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customer.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1162,8 +1357,15 @@ export default function StaffDashboard() {
 
             {/* Orders Table */}
             <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-              <div className="p-6 border-b">
+              <div className="p-6 border-b flex justify-between items-center">
                 <h3 className="text-xl font-semibold text-gray-900">Trade-In Orders</h3>
+                <button
+                  onClick={() => setShowAddOrderForm(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Order</span>
+                </button>
               </div>
               {isLoadingOrders ? (
                 <div className="p-8 text-center">
@@ -1508,6 +1710,13 @@ export default function StaffDashboard() {
                 <h2 className="text-2xl font-bold text-gray-900">Client Management</h2>
                 <p className="text-gray-600 mt-1">View and manage all customer information and trade-in history</p>
               </div>
+              <button
+                onClick={() => setShowAddClientForm(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Client</span>
+              </button>
             </div>
 
             {/* Search */}
@@ -1628,13 +1837,29 @@ export default function StaffDashboard() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button 
-                              onClick={() => handleViewClientDetails(client)}
-                              className="text-blue-600 hover:text-blue-900 flex items-center space-x-1"
-                            >
-                              <Eye className="w-4 h-4" />
-                              <span>View Details</span>
-                            </button>
+                            <div className="flex items-center space-x-2">
+                              <button 
+                                onClick={() => handleViewClientDetails(client)}
+                                className="text-blue-600 hover:text-blue-900 flex items-center space-x-1"
+                              >
+                                <Eye className="w-4 h-4" />
+                                <span>View</span>
+                              </button>
+                              <button 
+                                onClick={() => handleEditClient(client)}
+                                className="text-green-600 hover:text-green-900 flex items-center space-x-1"
+                              >
+                                <Edit className="w-4 h-4" />
+                                <span>Edit</span>
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteClient(client.id)}
+                                className="text-red-600 hover:text-red-900 flex items-center space-x-1"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                <span>Delete</span>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -2501,6 +2726,275 @@ export default function StaffDashboard() {
 
         
       </div>
+      
+      {/* Add Order Modal */}
+      {showAddOrderForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">Add New Order</h2>
+                <button
+                  onClick={() => setShowAddOrderForm(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <form onSubmit={(e) => { e.preventDefault(); handleAddOrder(); }}>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                      <input
+                        type="email"
+                        value={orderFormData.customerEmail}
+                        onChange={(e) => setOrderFormData({...orderFormData, customerEmail: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                      <input
+                        type="text"
+                        value={orderFormData.customerName}
+                        onChange={(e) => setOrderFormData({...orderFormData, customerName: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Device Model *</label>
+                      <select
+                        value={orderFormData.deviceModelId}
+                        onChange={(e) => setOrderFormData({...orderFormData, deviceModelId: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      >
+                        <option value="">Select Device Model</option>
+                        {devices.map((device) => (
+                          <option key={device.id} value={device.id}>
+                            {device.name} ({device.brand.name})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Condition *</label>
+                      <select
+                        value={orderFormData.deviceConditionId}
+                        onChange={(e) => setOrderFormData({...orderFormData, deviceConditionId: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      >
+                        <option value="">Select Condition</option>
+                        {deviceConditions.map((condition) => (
+                          <option key={condition.id} value={condition.id}>
+                            {condition.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Quoted Amount *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={orderFormData.quotedAmount}
+                        onChange={(e) => setOrderFormData({...orderFormData, quotedAmount: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                      <select
+                        value={orderFormData.paymentMethod}
+                        onChange={(e) => setOrderFormData({...orderFormData, paymentMethod: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="e-transfer">E-transfer</option>
+                        <option value="paypal">PayPal</option>
+                        <option value="cheque">Cheque</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea
+                      value={orderFormData.notes}
+                      onChange={(e) => setOrderFormData({...orderFormData, notes: e.target.value})}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddOrderForm(false)}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Create Order
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Add/Edit Client Modal */}
+      {showAddClientForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {editingClient ? 'Edit Client' : 'Add New Client'}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowAddClientForm(false);
+                    setEditingClient(null);
+                    resetClientForm();
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <form onSubmit={(e) => { 
+                e.preventDefault(); 
+                if (editingClient) {
+                  handleUpdateClient();
+                } else {
+                  handleAddClient();
+                }
+              }}>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                    <input
+                      type="text"
+                      value={clientFormData.firstName}
+                      onChange={(e) => setClientFormData({...clientFormData, firstName: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                    <input
+                      type="text"
+                      value={clientFormData.lastName}
+                      onChange={(e) => setClientFormData({...clientFormData, lastName: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                    <input
+                      type="email"
+                      value={clientFormData.email}
+                      onChange={(e) => setClientFormData({...clientFormData, email: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <input
+                      type="tel"
+                      value={clientFormData.phone}
+                      onChange={(e) => setClientFormData({...clientFormData, phone: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <input
+                      type="text"
+                      value={clientFormData.addressLine1}
+                      onChange={(e) => setClientFormData({...clientFormData, addressLine1: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                    <input
+                      type="text"
+                      value={clientFormData.city}
+                      onChange={(e) => setClientFormData({...clientFormData, city: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Province</label>
+                    <input
+                      type="text"
+                      value={clientFormData.province}
+                      onChange={(e) => setClientFormData({...clientFormData, province: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
+                    <input
+                      type="text"
+                      value={clientFormData.postalCode}
+                      onChange={(e) => setClientFormData({...clientFormData, postalCode: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddClientForm(false);
+                      setEditingClient(null);
+                      resetClientForm();
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    {editingClient ? 'Update Client' : 'Add Client'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Confirmation Modal */}
       <ConfirmationModal

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from '../../../../lib/database';
+import { supabaseAdmin } from '../../../utils/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -7,10 +7,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const conditions = await prisma.deviceCondition.findMany({
-      where: { isActive: true },
-      orderBy: { priceMultiplier: 'desc' }
-    });
+    const { data: conditions, error } = await supabaseAdmin
+      .from('DeviceCondition')
+      .select('*')
+      .eq('isActive', true)
+      .order('name', { ascending: true });
+
+    if (error) throw error;
 
     res.status(200).json({
       conditions

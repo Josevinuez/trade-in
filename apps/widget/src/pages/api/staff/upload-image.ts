@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { put } from '@vercel/blob';
+import { supabaseAdmin } from '../../../utils/supabase';
 
 export const config = {
   api: {
@@ -52,30 +52,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const extension = mimeType.split('/')[1];
     const uniqueFileName = `${timestamp}-${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
     
-    console.log('Uploading to Vercel Blob:', { uniqueFileName, mimeType });
+    console.log('Uploading to Supabase Storage:', { uniqueFileName, mimeType });
 
     try {
       // Convert base64 to buffer
       const buffer = Buffer.from(base64Data, 'base64');
       
-      // Upload to Vercel Blob
-      const { url } = await put(uniqueFileName, buffer, {
-        access: 'public',
-        contentType: mimeType,
-      });
+      // Upload to Supabase Storage
+      const { data, error } = await supabaseAdmin.storage
+        .from('images')
+        .upload(uniqueFileName, buffer, {
+          contentType: mimeType,
+          cacheControl: '3600',
+          upsert: false
+        });
 
-      console.log('Upload successful to Vercel Blob:', { url, fileSize: buffer.length });
+      if (error) {
+        console.error('Supabase Storage upload error:', error);
+        return res.status(500).json({ 
+          error: 'Failed to upload image to storage',
+          details: error.message
+        });
+      }
+
+      // Get public URL
+      const { data: urlData } = supabaseAdmin.storage
+        .from('images')
+        .getPublicUrl(uniqueFileName);
+
+      console.log('Upload successful to Supabase Storage:', { url: urlData.publicUrl, fileSize: buffer.length });
 
       res.status(200).json({ 
-        imageUrl: url,
+        imageUrl: urlData.publicUrl,
         message: 'Image uploaded successfully',
         fileName: uniqueFileName,
         fileSize: buffer.length
       });
     } catch (uploadError) {
-      console.error('Vercel Blob upload error:', uploadError);
+      console.error('Supabase Storage upload error:', uploadError);
       res.status(500).json({ 
-        error: 'Failed to upload image to blob storage',
+        error: 'Failed to upload image to storage',
         details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
       });
     }

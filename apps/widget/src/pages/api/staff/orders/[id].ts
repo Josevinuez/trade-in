@@ -1,157 +1,94 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from '../../../../../lib/database';
+import { supabaseAdmin } from '../../../../utils/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
-
-  if (!id) {
-    return res.status(400).json({ error: 'Order ID is required' });
-  }
+  const orderId = parseInt(id as string);
 
   if (req.method === 'PUT') {
     try {
-      const { status, trackingNumber, notes, paymentMethod } = req.body;
-
-      console.log('Updating order:', id, 'with data:', { status, trackingNumber, notes, paymentMethod });
+      const { status, finalAmount, notes, trackingNumber, paymentMethod } = req.body;
 
       const updateData: any = {
         status,
-        notes: notes || null,
+        updatedAt: new Date().toISOString()
       };
 
-      // Add payment method if provided
+      if (finalAmount !== undefined) {
+        updateData.finalAmount = finalAmount;
+      }
+
+      if (notes !== undefined) {
+        updateData.notes = notes;
+      }
+
       if (paymentMethod !== undefined) {
-        updateData.paymentMethod = paymentMethod || null;
+        updateData.paymentMethod = paymentMethod;
       }
 
-      // If status is COMPLETED, set completedAt
-      if (status === 'COMPLETED') {
-        updateData.completedAt = new Date();
+      if (status === 'PROCESSING') {
+        updateData.processedAt = new Date().toISOString();
+      } else if (status === 'COMPLETED') {
+        updateData.completedAt = new Date().toISOString();
       }
 
-      const updatedOrder = await prisma.tradeInOrder.update({
-        where: { id: parseInt(id as string) },
-        data: updateData,
-        include: {
-          customer: true,
-          deviceModel: {
-            include: {
-              brand: true,
-              category: true,
-            }
-          },
-          deviceCondition: true,
-          shippingLabels: true,
-          payments: true,
-        }
-      });
+      const { data: order, error } = await supabaseAdmin
+        .from('TradeInOrder')
+        .update(updateData)
+        .eq('id', orderId)
+        .select(`
+          *,
+          customer:Customer(*),
+          deviceModel:DeviceModel(
+            *,
+            brand:DeviceBrand(*),
+            category:DeviceCategory(*)
+          ),
+          deviceCondition:DeviceCondition(*),
+          storageOption:DeviceStorageOption(*)
+        `)
+        .single();
 
-      // Handle tracking number update
-      if (trackingNumber) {
-        // Check if shipping label exists
-        const existingLabel = await prisma.shippingLabel.findFirst({
-          where: { orderId: parseInt(id as string) }
+      if (error) throw error;
+
+      // Create status history entry
+      await supabaseAdmin
+        .from('OrderStatusHistory')
+        .insert({
+          orderId,
+          status,
+          notes: notes || `Status updated to ${status}`,
+          updatedBy: 1 // Default staff member
         });
 
-        if (existingLabel) {
-          // Update existing shipping label
-          await prisma.shippingLabel.update({
-            where: { id: existingLabel.id },
-            data: { trackingNumber }
-          });
-        } else {
-          // Create new shipping label
-          await prisma.shippingLabel.create({
-            data: {
-              orderId: parseInt(id as string),
-              trackingNumber,
-              carrier: 'Standard Shipping'
-            }
-          });
-        }
-      }
-
-      console.log('Order updated successfully:', updatedOrder.id);
-
-      return res.status(200).json(updatedOrder);
-    } catch (error: any) {
-      console.error('Order update error:', error);
-      return res.status(500).json({ error: 'Failed to update order', details: error instanceof Error ? error.message : 'Unknown error' });
+      res.status(200).json(order);
+    } catch (error) {
+      console.error('Error updating order:', error);
+      res.status(500).json({ error: 'Failed to update order' });
     }
-  }
-
-  if (req.method === 'GET') {
+  } else if (req.method === 'DELETE') {
     try {
-      const order = await prisma.tradeInOrder.findUnique({
-        where: { id: parseInt(id as string) },
-        include: {
-          customer: true,
-          deviceModel: {
-            include: {
-              brand: true,
-              category: true,
-            }
-          },
-          deviceCondition: true,
-          shippingLabels: true,
-          payments: true,
-        }
-      });
-
-      if (!order) {
-        return res.status(404).json({ error: 'Order not found' });
-      }
-
-      return res.status(200).json(order);
-    } catch (error: any) {
-      console.error('Order fetch error:', error);
-      return res.status(500).json({ error: 'Failed to fetch order', details: error instanceof Error ? error.message : 'Unknown error' });
-    }
-  }
-
-  if (req.method === 'DELETE') {
-    try {
-      console.log('Deleting order:', id);
-
-      // Check if order exists
-      const order = await prisma.tradeInOrder.findUnique({
-        where: { id: parseInt(id as string) }
-      });
-
-      if (!order) {
-        return res.status(404).json({ error: 'Order not found' });
-      }
-
-      // Delete related records first (shipping labels, payments, etc.)
-      await prisma.shippingLabel.deleteMany({
-        where: { orderId: parseInt(id as string) }
-      });
-
-      await prisma.payment.deleteMany({
-        where: { orderId: parseInt(id as string) }
-      });
-
-      await prisma.customerMessage.deleteMany({
-        where: { orderId: parseInt(id as string) }
-      });
-
-      await prisma.orderStatusHistory.deleteMany({
-        where: { orderId: parseInt(id as string) }
-      });
+      // Delete status history first
+      await supabaseAdmin
+        .from('OrderStatusHistory')
+        .delete()
+        .eq('orderId', orderId);
 
       // Delete the order
-      await prisma.tradeInOrder.delete({
-        where: { id: parseInt(id as string) }
-      });
+      const { error } = await supabaseAdmin
+        .from('TradeInOrder')
+        .delete()
+        .eq('id', orderId);
 
-      console.log('Order deleted successfully:', id);
+      if (error) throw error;
 
-      return res.status(200).json({ message: 'Order deleted successfully' });
-    } catch (error: any) {
-      console.error('Order deletion error:', error);
-      return res.status(500).json({ error: 'Failed to delete order', details: error instanceof Error ? error.message : 'Unknown error' });
+      res.status(200).json({ message: 'Order deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      res.status(500).json({ error: 'Failed to delete order' });
     }
+  } else {
+    res.setHeader('Allow', ['PUT', 'DELETE']);
+    res.status(405).end(`Method ${req.method} Not Allowed`);
   }
-
-  return res.status(405).json({ error: 'Method not allowed' });
 } 

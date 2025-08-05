@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from '../../../../lib/database';
+import { supabaseAdmin } from '../../../utils/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
@@ -8,14 +8,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       switch (type) {
         case 'brands':
-          const allBrands = await prisma.deviceBrand.findMany({
-            orderBy: { name: 'asc' },
-            include: {
-              _count: {
-                select: { deviceModels: true }
-              }
-            }
-          });
+          const { data: allBrands, error } = await supabaseAdmin
+            .from('DeviceBrand')
+            .select('*')
+            .order('name', { ascending: true });
+          
+          if (error) throw error;
           return res.status(200).json(allBrands);
 
         default:
@@ -35,14 +33,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         case 'brand':
           const { name, logoUrl } = data;
           
-          const newBrand = await prisma.deviceBrand.create({
-            data: {
+          const { data: newBrand, error } = await supabaseAdmin
+            .from('DeviceBrand')
+            .insert({
               name,
               logoUrl: logoUrl || null,
               isActive: true
-            }
-          });
+            })
+            .select()
+            .single();
 
+          if (error) throw error;
           return res.status(201).json(newBrand);
 
         default:
@@ -62,15 +63,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         case 'brand':
           const { id, name, logoUrl, isActive } = data;
           
-          const updatedBrand = await prisma.deviceBrand.update({
-            where: { id: parseInt(id) },
-            data: {
+          const { data: updatedBrand, error } = await supabaseAdmin
+            .from('DeviceBrand')
+            .update({
               name,
               logoUrl: logoUrl || null,
               isActive: isActive !== undefined ? isActive : true
-            }
-          });
+            })
+            .eq('id', parseInt(id))
+            .select()
+            .single();
 
+          if (error) throw error;
           return res.status(200).json(updatedBrand);
 
         default:

@@ -73,6 +73,7 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
   const [quoteAmount, setQuoteAmount] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [orderNumber, setOrderNumber] = useState<string>('');
 
   // Fetch device data from backend
   useEffect(() => {
@@ -226,6 +227,15 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
 
     setIsSubmitting(true);
     try {
+      // Find the selected storage option ID
+      const selectedStorageOption = selectedDeviceModel?.storageOptions.find(
+        opt => opt.storage === selectedStorage
+      );
+
+      if (!selectedStorageOption) {
+        throw new Error('Storage option not found');
+      }
+
       const response = await fetch('/api/trade-in/submit', {
         method: 'POST',
         headers: {
@@ -241,6 +251,7 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
           customerPostalCode: customerInfo.postalCode,
           deviceModelId: selectedDeviceModel?.id,
           deviceConditionId: selectedCondition?.id,
+          storageOptionId: selectedStorageOption.id,
           quotedAmount: quoteAmount,
           paymentMethod: customerInfo.paymentMethod,
           notes: `Shipping label: ${customerInfo.shippingLabel}`,
@@ -248,6 +259,8 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
       });
 
       if (response.ok) {
+        const data = await response.json();
+        setOrderNumber(data.orderNumber);
         setShowSuccess(true);
         // Reset form
         setCurrentStep('type');
@@ -659,4 +672,55 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
       </motion.div>
     </AnimatePresence>
   );
+
+  // Success Modal
+  if (showSuccess) {
+    return (
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+          >
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                <Check className="h-6 w-6 text-green-600" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Trade-In Submitted Successfully!
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Your order has been submitted and is being processed.
+              </p>
+              {orderNumber && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-gray-600 mb-1">Order Number:</p>
+                  <p className="text-lg font-mono font-bold text-gray-900">{orderNumber}</p>
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mb-6">
+                Please save this order number for future reference. You can track your order status using this number.
+              </p>
+              <button
+                onClick={() => {
+                  setShowSuccess(false);
+                  setShowForm?.(false);
+                }}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
 } 
