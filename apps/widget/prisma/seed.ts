@@ -4,754 +4,496 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding database...');
+  console.log('🌱 Starting database seed...');
 
-  // Create device categories
-  const smartphoneCategory = await prisma.deviceCategory.upsert({
-    where: { name: 'Smartphone' },
-    update: {},
-    create: {
-      name: 'Smartphone',
-      description: 'Mobile phones and smartphones',
-      icon: 'smartphone',
-    },
-  });
+  // Clear existing data
+  await prisma.orderStatusHistory.deleteMany();
+  await prisma.shippingLabel.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.customerMessage.deleteMany();
+  await prisma.tradeInOrder.deleteMany();
+  await prisma.deviceStorageOption.deleteMany();
+  await prisma.deviceModel.deleteMany();
+  await prisma.deviceBrand.deleteMany();
+  await prisma.deviceCategory.deleteMany();
+  await prisma.deviceCondition.deleteMany();
+  await prisma.customer.deleteMany();
 
-  const tabletCategory = await prisma.deviceCategory.upsert({
-    where: { name: 'Tablet' },
-    update: {},
-    create: {
-      name: 'Tablet',
-      description: 'Tablets and iPads',
-      icon: 'tablet',
-    },
-  });
-
-  const laptopCategory = await prisma.deviceCategory.upsert({
-    where: { name: 'Laptop' },
-    update: {},
-    create: {
-      name: 'Laptop',
-      description: 'Laptops and notebooks',
-      icon: 'laptop',
-    },
-  });
-
-  const smartwatchCategory = await prisma.deviceCategory.upsert({
-    where: { name: 'Smartwatch' },
-    update: {},
-    create: {
-      name: 'Smartwatch',
-      description: 'Smartwatches and wearables',
-      icon: 'watch',
-    },
-  });
-
-  // Create device brands
-  const appleBrand = await prisma.deviceBrand.upsert({
-    where: { name: 'Apple' },
-    update: {},
-    create: {
-      name: 'Apple',
-      logoUrl: '/logos/apple.png',
-    },
-  });
-
-  const samsungBrand = await prisma.deviceBrand.upsert({
-    where: { name: 'Samsung' },
-    update: {},
-    create: {
-      name: 'Samsung',
-      logoUrl: '/logos/samsung.png',
-    },
-  });
-
-  const googleBrand = await prisma.deviceBrand.upsert({
-    where: { name: 'Google' },
-    update: {},
-    create: {
-      name: 'Google',
-      logoUrl: '/logos/google.png',
-    },
-  });
-
-  const microsoftBrand = await prisma.deviceBrand.upsert({
-    where: { name: 'Microsoft' },
-    update: {},
-    create: {
-      name: 'Microsoft',
-      logoUrl: '/logos/microsoft.png',
-    },
-  });
+  console.log('🗑️ Cleared existing data');
 
   // Create device conditions
-  const excellentCondition = await prisma.deviceCondition.upsert({
-    where: { name: 'Excellent' },
-    update: {},
-    create: {
+  const excellentCondition = await prisma.deviceCondition.create({
+    data: {
       name: 'Excellent',
-      description: 'Like new condition, no scratches or damage',
-      priceMultiplier: 1.00,
+      description: 'Like new condition with minimal wear',
+      priceMultiplier: 1.0,
+      isActive: true,
     },
   });
 
-  const goodCondition = await prisma.deviceCondition.upsert({
-    where: { name: 'Good' },
-    update: {},
-    create: {
+  const goodCondition = await prisma.deviceCondition.create({
+    data: {
       name: 'Good',
-      description: 'Minor wear, fully functional',
-      priceMultiplier: 0.85,
+      description: 'Minor scratches or wear, fully functional',
+      priceMultiplier: 0.8,
+      isActive: true,
     },
   });
 
-  const fairCondition = await prisma.deviceCondition.upsert({
-    where: { name: 'Fair' },
-    update: {},
-    create: {
+  const fairCondition = await prisma.deviceCondition.create({
+    data: {
       name: 'Fair',
-      description: 'Some wear and tear, still functional',
-      priceMultiplier: 0.70,
+      description: 'Visible wear but functional',
+      priceMultiplier: 0.6,
+      isActive: true,
     },
   });
 
-  const poorCondition = await prisma.deviceCondition.upsert({
-    where: { name: 'Poor' },
-    update: {},
-    create: {
+  const poorCondition = await prisma.deviceCondition.create({
+    data: {
       name: 'Poor',
-      description: 'Significant damage but repairable',
-      priceMultiplier: 0.50,
+      description: 'Significant wear or damage',
+      priceMultiplier: 0.4,
+      isActive: true,
     },
   });
 
-  // Create device models
-  const iphone15Pro = await prisma.deviceModel.upsert({
-    where: { name: 'iPhone 15 Pro' },
-    update: {},
-    create: {
+  console.log('✅ Created device conditions');
+
+  // Create device categories
+  const smartphoneCategory = await prisma.deviceCategory.create({
+    data: {
+      name: 'Smartphones',
+      description: 'Mobile phones and smartphones',
+      icon: '📱',
+      isActive: true,
+    },
+  });
+
+  const tabletCategory = await prisma.deviceCategory.create({
+    data: {
+      name: 'Tablets',
+      description: 'Tablets and iPads',
+      icon: '📱',
+      isActive: true,
+    },
+  });
+
+  const laptopCategory = await prisma.deviceCategory.create({
+    data: {
+      name: 'Laptops',
+      description: 'Laptops and notebooks',
+      icon: '💻',
+      isActive: true,
+    },
+  });
+
+  const watchCategory = await prisma.deviceCategory.create({
+    data: {
+      name: 'Smartwatches',
+      description: 'Smartwatches and fitness trackers',
+      icon: '⌚',
+      isActive: true,
+    },
+  });
+
+  const consoleCategory = await prisma.deviceCategory.create({
+    data: {
+      name: 'Gaming Consoles',
+      description: 'Gaming consoles and accessories',
+      icon: '🎮',
+      isActive: true,
+    },
+  });
+
+  console.log('✅ Created device categories');
+
+  // Create device brands
+  const appleBrand = await prisma.deviceBrand.create({
+    data: {
+      name: 'Apple',
+      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg',
+      isActive: true,
+    },
+  });
+
+  const samsungBrand = await prisma.deviceBrand.create({
+    data: {
+      name: 'Samsung',
+      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg',
+      isActive: true,
+    },
+  });
+
+  const googleBrand = await prisma.deviceBrand.create({
+    data: {
+      name: 'Google',
+      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg',
+      isActive: true,
+    },
+  });
+
+  const microsoftBrand = await prisma.deviceBrand.create({
+    data: {
+      name: 'Microsoft',
+      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/9/96/Microsoft_logo_%282012%29.svg',
+      isActive: true,
+    },
+  });
+
+  const sonyBrand = await prisma.deviceBrand.create({
+    data: {
+      name: 'Sony',
+      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/2/29/Sony_logo.svg',
+      isActive: true,
+    },
+  });
+
+  console.log('✅ Created device brands');
+
+  // Create device models with storage options
+  const iphone15Pro = await prisma.deviceModel.create({
+    data: {
       name: 'iPhone 15 Pro',
       modelNumber: 'A3102',
       releaseYear: 2023,
       displayOrder: 1,
       categoryId: smartphoneCategory.id,
       brandId: appleBrand.id,
+      isActive: true,
     },
   });
 
-  const samsungS24 = await prisma.deviceModel.upsert({
-    where: { name: 'Samsung Galaxy S24' },
-    update: {},
-    create: {
+  const iphone15 = await prisma.deviceModel.create({
+    data: {
+      name: 'iPhone 15',
+      modelNumber: 'A3090',
+      releaseYear: 2023,
+      displayOrder: 2,
+      categoryId: smartphoneCategory.id,
+      brandId: appleBrand.id,
+      isActive: true,
+    },
+  });
+
+  const samsungS24 = await prisma.deviceModel.create({
+    data: {
       name: 'Samsung Galaxy S24',
       modelNumber: 'SM-S921',
       releaseYear: 2024,
-      displayOrder: 2,
+      displayOrder: 3,
       categoryId: smartphoneCategory.id,
       brandId: samsungBrand.id,
+      isActive: true,
     },
   });
 
-  const ipadPro = await prisma.deviceModel.upsert({
-    where: { name: 'iPad Pro 12.9"' },
-    update: {},
-    create: {
-      name: 'iPad Pro 12.9"',
-      modelNumber: 'A2435',
-      releaseYear: 2022,
-      displayOrder: 1,
+  const ipadPro = await prisma.deviceModel.create({
+    data: {
+      name: 'iPad Pro',
+      modelNumber: 'A3101',
+      releaseYear: 2023,
+      displayOrder: 4,
       categoryId: tabletCategory.id,
       brandId: appleBrand.id,
+      isActive: true,
     },
   });
 
-  const macbookAir = await prisma.deviceModel.upsert({
-    where: { name: 'MacBook Air M2' },
-    update: {},
-    create: {
+  const macbookAir = await prisma.deviceModel.create({
+    data: {
       name: 'MacBook Air M2',
       modelNumber: 'A2681',
       releaseYear: 2022,
-      displayOrder: 1,
+      displayOrder: 5,
       categoryId: laptopCategory.id,
       brandId: appleBrand.id,
+      isActive: true,
     },
   });
 
-  const appleWatch = await prisma.deviceModel.upsert({
-    where: { name: 'Apple Watch Series 9' },
-    update: {},
-    create: {
+  const appleWatch = await prisma.deviceModel.create({
+    data: {
       name: 'Apple Watch Series 9',
-      modelNumber: 'A2972',
+      modelNumber: 'A2980',
       releaseYear: 2023,
-      displayOrder: 1,
-      categoryId: smartwatchCategory.id,
+      displayOrder: 6,
+      categoryId: watchCategory.id,
       brandId: appleBrand.id,
+      isActive: true,
     },
   });
 
-  // Create storage options for devices
+  const ps5 = await prisma.deviceModel.create({
+    data: {
+      name: 'PlayStation 5',
+      modelNumber: 'CFI-1000',
+      releaseYear: 2020,
+      displayOrder: 7,
+      categoryId: consoleCategory.id,
+      brandId: sonyBrand.id,
+      isActive: true,
+    },
+  });
+
+  console.log('✅ Created device models');
+
+  // Create storage options for iPhone 15 Pro
   await prisma.deviceStorageOption.createMany({
     data: [
-      // iPhone 15 Pro storage options
-      { 
-        modelId: iphone15Pro.id, 
-        storage: '128GB', 
-        excellentPrice: 1200.00,
-        goodPrice: 1080.00,
-        fairPrice: 960.00,
-        poorPrice: 840.00
-      },
-      { 
-        modelId: iphone15Pro.id, 
-        storage: '256GB', 
-        excellentPrice: 1350.00,
-        goodPrice: 1215.00,
-        fairPrice: 1080.00,
-        poorPrice: 945.00
-      },
-      { 
-        modelId: iphone15Pro.id, 
-        storage: '512GB', 
-        excellentPrice: 1500.00,
-        goodPrice: 1350.00,
-        fairPrice: 1200.00,
-        poorPrice: 1050.00
-      },
-      { 
-        modelId: iphone15Pro.id, 
-        storage: '1TB', 
-        excellentPrice: 1650.00,
-        goodPrice: 1485.00,
-        fairPrice: 1320.00,
-        poorPrice: 1155.00
-      },
-      
-      // Samsung Galaxy S24 storage options
-      { 
-        modelId: samsungS24.id, 
-        storage: '128GB', 
-        excellentPrice: 1100.00,
-        goodPrice: 990.00,
-        fairPrice: 880.00,
-        poorPrice: 770.00
-      },
-      { 
-        modelId: samsungS24.id, 
-        storage: '256GB', 
-        excellentPrice: 1250.00,
-        goodPrice: 1125.00,
-        fairPrice: 1000.00,
-        poorPrice: 875.00
-      },
-      { 
-        modelId: samsungS24.id, 
-        storage: '512GB', 
-        excellentPrice: 1400.00,
-        goodPrice: 1260.00,
-        fairPrice: 1120.00,
-        poorPrice: 980.00
-      },
-      
-      // iPad Pro storage options
-      { 
-        modelId: ipadPro.id, 
-        storage: '128GB', 
-        excellentPrice: 1200.00,
-        goodPrice: 1080.00,
-        fairPrice: 960.00,
-        poorPrice: 840.00
-      },
-      { 
-        modelId: ipadPro.id, 
-        storage: '256GB', 
-        excellentPrice: 1350.00,
-        goodPrice: 1215.00,
-        fairPrice: 1080.00,
-        poorPrice: 945.00
-      },
-      { 
-        modelId: ipadPro.id, 
-        storage: '512GB', 
-        excellentPrice: 1500.00,
-        goodPrice: 1350.00,
-        fairPrice: 1200.00,
-        poorPrice: 1050.00
-      },
-      { 
-        modelId: ipadPro.id, 
-        storage: '1TB', 
-        excellentPrice: 1650.00,
-        goodPrice: 1485.00,
-        fairPrice: 1320.00,
-        poorPrice: 1155.00
-      },
-      { 
-        modelId: ipadPro.id, 
-        storage: '2TB', 
-        excellentPrice: 1800.00,
-        goodPrice: 1620.00,
-        fairPrice: 1440.00,
-        poorPrice: 1260.00
-      },
-      
-      // MacBook Air storage options
-      { 
-        modelId: macbookAir.id, 
-        storage: '256GB', 
-        excellentPrice: 1500.00,
-        goodPrice: 1350.00,
-        fairPrice: 1200.00,
-        poorPrice: 1050.00
-      },
-      { 
-        modelId: macbookAir.id, 
-        storage: '512GB', 
-        excellentPrice: 1700.00,
-        goodPrice: 1530.00,
-        fairPrice: 1360.00,
-        poorPrice: 1190.00
-      },
-      { 
-        modelId: macbookAir.id, 
-        storage: '1TB', 
-        excellentPrice: 1900.00,
-        goodPrice: 1710.00,
-        fairPrice: 1520.00,
-        poorPrice: 1330.00
-      },
-      { 
-        modelId: macbookAir.id, 
-        storage: '2TB', 
-        excellentPrice: 2100.00,
-        goodPrice: 1890.00,
-        fairPrice: 1680.00,
-        poorPrice: 1470.00
-      },
-      
-      // Apple Watch storage options
-      { 
-        modelId: appleWatch.id, 
-        storage: '41mm', 
-        excellentPrice: 400.00,
-        goodPrice: 360.00,
-        fairPrice: 320.00,
-        poorPrice: 280.00
-      },
-      { 
-        modelId: appleWatch.id, 
-        storage: '45mm', 
-        excellentPrice: 450.00,
-        goodPrice: 405.00,
-        fairPrice: 360.00,
-        poorPrice: 315.00
-      },
+      { modelId: iphone15Pro.id, storage: '128GB', excellentPrice: 1200.00, goodPrice: 960.00, fairPrice: 720.00, poorPrice: 480.00 },
+      { modelId: iphone15Pro.id, storage: '256GB', excellentPrice: 1350.00, goodPrice: 1080.00, fairPrice: 810.00, poorPrice: 540.00 },
+      { modelId: iphone15Pro.id, storage: '512GB', excellentPrice: 1500.00, goodPrice: 1200.00, fairPrice: 900.00, poorPrice: 600.00 },
+      { modelId: iphone15Pro.id, storage: '1TB', excellentPrice: 1650.00, goodPrice: 1320.00, fairPrice: 990.00, poorPrice: 660.00 },
     ],
-    skipDuplicates: true,
   });
 
-  // Create payment methods
-  const interacETransfer = await prisma.paymentMethod.upsert({
-    where: { name: 'Interac E-Transfer' },
-    update: {},
-    create: {
-      name: 'Interac E-Transfer',
-      description: 'Direct bank transfer',
-    },
+  // Create storage options for iPhone 15
+  await prisma.deviceStorageOption.createMany({
+    data: [
+      { modelId: iphone15.id, storage: '128GB', excellentPrice: 1000.00, goodPrice: 800.00, fairPrice: 600.00, poorPrice: 400.00 },
+      { modelId: iphone15.id, storage: '256GB', excellentPrice: 1150.00, goodPrice: 920.00, fairPrice: 690.00, poorPrice: 460.00 },
+      { modelId: iphone15.id, storage: '512GB', excellentPrice: 1300.00, goodPrice: 1040.00, fairPrice: 780.00, poorPrice: 520.00 },
+    ],
   });
 
-  const paypal = await prisma.paymentMethod.upsert({
-    where: { name: 'PayPal' },
-    update: {},
-    create: {
-      name: 'PayPal',
-      description: 'PayPal payment',
-    },
+  // Create storage options for Samsung S24
+  await prisma.deviceStorageOption.createMany({
+    data: [
+      { modelId: samsungS24.id, storage: '128GB', excellentPrice: 900.00, goodPrice: 720.00, fairPrice: 540.00, poorPrice: 360.00 },
+      { modelId: samsungS24.id, storage: '256GB', excellentPrice: 1050.00, goodPrice: 840.00, fairPrice: 630.00, poorPrice: 420.00 },
+      { modelId: samsungS24.id, storage: '512GB', excellentPrice: 1200.00, goodPrice: 960.00, fairPrice: 720.00, poorPrice: 480.00 },
+    ],
   });
 
-  const cheque = await prisma.paymentMethod.upsert({
-    where: { name: 'Cheque' },
-    update: {},
-    create: {
-      name: 'Cheque',
-      description: 'Physical cheque',
-    },
+  // Create storage options for iPad Pro
+  await prisma.deviceStorageOption.createMany({
+    data: [
+      { modelId: ipadPro.id, storage: '128GB', excellentPrice: 800.00, goodPrice: 640.00, fairPrice: 480.00, poorPrice: 320.00 },
+      { modelId: ipadPro.id, storage: '256GB', excellentPrice: 950.00, goodPrice: 760.00, fairPrice: 570.00, poorPrice: 380.00 },
+      { modelId: ipadPro.id, storage: '512GB', excellentPrice: 1100.00, goodPrice: 880.00, fairPrice: 660.00, poorPrice: 440.00 },
+      { modelId: ipadPro.id, storage: '1TB', excellentPrice: 1250.00, goodPrice: 1000.00, fairPrice: 750.00, poorPrice: 500.00 },
+    ],
   });
 
-  // Create staff users
-  const hashedPassword = await bcrypt.hash('staff123', 10);
-  
-  const adminStaff = await prisma.staff.upsert({
-    where: { email: 'admin@tradeinpro.com' },
-    update: {},
-    create: {
-      email: 'admin@tradeinpro.com',
-      passwordHash: hashedPassword,
-      firstName: 'Admin',
-      lastName: 'User',
-      role: 'ADMIN',
-      phone: '+1-555-000-0001',
-    },
+  // Create storage options for MacBook Air
+  await prisma.deviceStorageOption.createMany({
+    data: [
+      { modelId: macbookAir.id, storage: '256GB', excellentPrice: 1200.00, goodPrice: 960.00, fairPrice: 720.00, poorPrice: 480.00 },
+      { modelId: macbookAir.id, storage: '512GB', excellentPrice: 1400.00, goodPrice: 1120.00, fairPrice: 840.00, poorPrice: 560.00 },
+      { modelId: macbookAir.id, storage: '1TB', excellentPrice: 1600.00, goodPrice: 1280.00, fairPrice: 960.00, poorPrice: 640.00 },
+    ],
   });
 
-  const managerStaff = await prisma.staff.upsert({
-    where: { email: 'manager@tradeinpro.com' },
-    update: {},
-    create: {
-      email: 'manager@tradeinpro.com',
-      passwordHash: hashedPassword,
-      firstName: 'Manager',
-      lastName: 'User',
-      role: 'MANAGER',
-      phone: '+1-555-000-0002',
-    },
+  // Create storage options for Apple Watch
+  await prisma.deviceStorageOption.createMany({
+    data: [
+      { modelId: appleWatch.id, storage: '41mm', excellentPrice: 400.00, goodPrice: 320.00, fairPrice: 240.00, poorPrice: 160.00 },
+      { modelId: appleWatch.id, storage: '45mm', excellentPrice: 450.00, goodPrice: 360.00, fairPrice: 270.00, poorPrice: 180.00 },
+    ],
   });
 
-  const operatorStaff = await prisma.staff.upsert({
-    where: { email: 'operator@tradeinpro.com' },
-    update: {},
-    create: {
-      email: 'operator@tradeinpro.com',
-      passwordHash: hashedPassword,
-      firstName: 'Operator',
-      lastName: 'User',
-      role: 'OPERATOR',
-      phone: '+1-555-000-0003',
-    },
+  // Create storage options for PS5
+  await prisma.deviceStorageOption.createMany({
+    data: [
+      { modelId: ps5.id, storage: '825GB', excellentPrice: 500.00, goodPrice: 400.00, fairPrice: 300.00, poorPrice: 200.00 },
+    ],
   });
 
-  const inspectorStaff = await prisma.staff.upsert({
-    where: { email: 'inspector@tradeinpro.com' },
-    update: {},
-    create: {
-      email: 'inspector@tradeinpro.com',
-      passwordHash: hashedPassword,
-      firstName: 'Inspector',
-      lastName: 'User',
-      role: 'INSPECTOR',
-      phone: '+1-555-000-0004',
-    },
-  });
+  console.log('✅ Created storage options');
 
-  // Create customer users
-  const customerPassword = await bcrypt.hash('customer123', 10);
-  
-  const johnSmith = await prisma.customer.upsert({
-    where: { email: 'john.smith@email.com' },
-    update: {},
-    create: {
-      email: 'john.smith@email.com',
-      passwordHash: customerPassword,
+  // Create sample customers
+  const customer1 = await prisma.customer.create({
+    data: {
       firstName: 'John',
-      lastName: 'Smith',
-      phone: '+1-555-123-4567',
-      addressLine1: '123 Main St',
+      lastName: 'Doe',
+      email: 'john.doe@example.com',
+      phone: '+1-555-0123',
+      addressLine1: '123 Main Street',
       city: 'Toronto',
       province: 'ON',
       postalCode: 'M5V 3A8',
+      passwordHash: bcrypt.hashSync('password123', 10),
     },
   });
 
-  const sarahJohnson = await prisma.customer.upsert({
-    where: { email: 'sarah.johnson@email.com' },
-    update: {},
-    create: {
-      email: 'sarah.johnson@email.com',
-      passwordHash: customerPassword,
-      firstName: 'Sarah',
-      lastName: 'Johnson',
-      phone: '+1-555-234-5678',
-      addressLine1: '456 Oak Ave',
+  const customer2 = await prisma.customer.create({
+    data: {
+      firstName: 'Jane',
+      lastName: 'Smith',
+      email: 'jane.smith@example.com',
+      phone: '+1-555-0456',
+      addressLine1: '456 Oak Avenue',
       city: 'Vancouver',
       province: 'BC',
       postalCode: 'V6B 1A1',
+      passwordHash: bcrypt.hashSync('password456', 10),
     },
   });
 
-  const mikeDavis = await prisma.customer.upsert({
-    where: { email: 'mike.davis@email.com' },
-    update: {},
-    create: {
-      email: 'mike.davis@email.com',
-      passwordHash: customerPassword,
+  const customer3 = await prisma.customer.create({
+    data: {
       firstName: 'Mike',
-      lastName: 'Davis',
-      phone: '+1-555-345-6789',
-      addressLine1: '789 Pine Rd',
+      lastName: 'Johnson',
+      email: 'mike.johnson@example.com',
+      phone: '+1-555-0789',
+      addressLine1: '789 Pine Road',
       city: 'Montreal',
       province: 'QC',
       postalCode: 'H2Y 1C6',
+      passwordHash: bcrypt.hashSync('password789', 10),
     },
   });
 
-  const lisaWilson = await prisma.customer.upsert({
-    where: { email: 'lisa.wilson@email.com' },
-    update: {},
-    create: {
-      email: 'lisa.wilson@email.com',
-      passwordHash: customerPassword,
-      firstName: 'Lisa',
-      lastName: 'Wilson',
-      phone: '+1-555-456-7890',
-      addressLine1: '321 Elm St',
-      city: 'Calgary',
-      province: 'AB',
-      postalCode: 'T2P 1J9',
+  console.log('✅ Created sample customers');
+
+  // Create a staff user for order history
+  const staffUser = await prisma.staff.create({
+    data: {
+      email: 'staff@tradeinpro.com',
+      passwordHash: 'demo-hash',
+      firstName: 'Demo',
+      lastName: 'Staff',
+      role: 'OPERATOR',
+      phone: '+1-555-0000',
     },
   });
 
-  const davidBrown = await prisma.customer.upsert({
-    where: { email: 'david.brown@email.com' },
-    update: {},
-    create: {
-      email: 'david.brown@email.com',
-      passwordHash: customerPassword,
-      firstName: 'David',
-      lastName: 'Brown',
-      phone: '+1-555-567-8901',
-      addressLine1: '654 Maple Dr',
-      city: 'Ottawa',
-      province: 'ON',
-      postalCode: 'K1P 1J1',
-    },
-  });
+  console.log('✅ Created staff user');
 
   // Create sample trade-in orders
-  const order1 = await prisma.tradeInOrder.upsert({
-    where: { orderNumber: 'TI-2024-001' },
-    update: {},
-    create: {
+  const order1 = await prisma.tradeInOrder.create({
+    data: {
       orderNumber: 'TI-2024-001',
-      customerId: johnSmith.id,
+      customerId: customer1.id,
       deviceModelId: iphone15Pro.id,
-      deviceConditionId: excellentCondition.id,
-      quotedAmount: 850.00,
-      finalAmount: 850.00,
-      status: 'PROCESSING',
-      notes: 'Device received, under inspection',
-    },
-  });
-
-  const order2 = await prisma.tradeInOrder.upsert({
-    where: { orderNumber: 'TI-2024-002' },
-    update: {},
-    create: {
-      orderNumber: 'TI-2024-002',
-      customerId: sarahJohnson.id,
-      deviceModelId: samsungS24.id,
-      deviceConditionId: goodCondition.id,
-      quotedAmount: 720.00,
-      finalAmount: 720.00,
-      status: 'COMPLETED',
-      notes: 'Payment sent via e-transfer',
-      completedAt: new Date(),
-    },
-  });
-
-  const order3 = await prisma.tradeInOrder.upsert({
-    where: { orderNumber: 'TI-2024-003' },
-    update: {},
-    create: {
-      orderNumber: 'TI-2024-003',
-      customerId: mikeDavis.id,
-      deviceModelId: ipadPro.id,
-      deviceConditionId: fairCondition.id,
-      quotedAmount: 650.00,
-      finalAmount: 600.00,
-      status: 'PENDING',
-      notes: 'Awaiting device shipment',
-    },
-  });
-
-  const order4 = await prisma.tradeInOrder.upsert({
-    where: { orderNumber: 'TI-2024-004' },
-    update: {},
-    create: {
-      orderNumber: 'TI-2024-004',
-      customerId: lisaWilson.id,
-      deviceModelId: macbookAir.id,
       deviceConditionId: excellentCondition.id,
       quotedAmount: 1200.00,
       finalAmount: 1200.00,
-      status: 'PROCESSING',
-      notes: 'Device received, data wipe in progress',
+      status: 'COMPLETED',
+      paymentMethod: 'e-transfer',
+      submittedAt: new Date('2024-01-15'),
+      completedAt: new Date('2024-01-20'),
+      notes: 'Customer was very satisfied with the process',
     },
   });
 
-  const order5 = await prisma.tradeInOrder.upsert({
-    where: { orderNumber: 'TI-2024-005' },
-    update: {},
-    create: {
-      orderNumber: 'TI-2024-005',
-      customerId: davidBrown.id,
-      deviceModelId: appleWatch.id,
+  const order2 = await prisma.tradeInOrder.create({
+    data: {
+      orderNumber: 'TI-2024-002',
+      customerId: customer2.id,
+      deviceModelId: samsungS24.id,
       deviceConditionId: goodCondition.id,
-      quotedAmount: 380.00,
-      finalAmount: 380.00,
-      status: 'COMPLETED',
-      notes: 'Payment completed',
-      completedAt: new Date(),
+      quotedAmount: 900.00,
+      finalAmount: 720.00,
+      status: 'PROCESSING',
+      paymentMethod: 'paypal',
+      submittedAt: new Date('2024-01-18'),
+      notes: 'Device condition was slightly worse than expected',
     },
   });
 
-  // Create shipping labels
-  await prisma.shippingLabel.upsert({
-    where: { trackingNumber: 'TRK123456789' },
-    update: {},
-    create: {
+  const order3 = await prisma.tradeInOrder.create({
+    data: {
+      orderNumber: 'TI-2024-003',
+      customerId: customer3.id,
+      deviceModelId: macbookAir.id,
+      deviceConditionId: fairCondition.id,
+      quotedAmount: 1200.00,
+      finalAmount: 720.00,
+      status: 'PENDING',
+      paymentMethod: 'cheque',
+      submittedAt: new Date('2024-01-20'),
+      notes: 'Waiting for customer to ship device',
+    },
+  });
+
+  console.log('✅ Created sample trade-in orders');
+
+  // Create sample shipping labels
+  await prisma.shippingLabel.create({
+    data: {
       orderId: order1.id,
-      trackingNumber: 'TRK123456789',
-      carrier: 'Canada Post',
-      shippedAt: new Date(),
-    },
-  });
-
-  await prisma.shippingLabel.upsert({
-    where: { trackingNumber: 'TRK987654321' },
-    update: {},
-    create: {
-      orderId: order2.id,
-      trackingNumber: 'TRK987654321',
-      carrier: 'FedEx',
-      shippedAt: new Date(),
-      deliveredAt: new Date(),
-    },
-  });
-
-  await prisma.shippingLabel.upsert({
-    where: { trackingNumber: 'TRK456789123' },
-    update: {},
-    create: {
-      orderId: order3.id,
-      trackingNumber: 'TRK456789123',
+      trackingNumber: '1Z999AA1234567890',
       carrier: 'UPS',
+      labelUrl: 'https://example.com/shipping-label-1.pdf',
     },
   });
 
-  await prisma.shippingLabel.upsert({
-    where: { trackingNumber: 'TRK789123456' },
-    update: {},
-    create: {
-      orderId: order4.id,
-      trackingNumber: 'TRK789123456',
-      carrier: 'Canada Post',
-      shippedAt: new Date(),
-    },
-  });
-
-  await prisma.shippingLabel.upsert({
-    where: { trackingNumber: 'TRK321654987' },
-    update: {},
-    create: {
-      orderId: order5.id,
-      trackingNumber: 'TRK321654987',
-      carrier: 'FedEx',
-      shippedAt: new Date(),
-      deliveredAt: new Date(),
-    },
-  });
-
-  // Create payments
-  await prisma.payment.upsert({
-    where: { transactionId: 'ET-2024-001' },
-    update: {},
-    create: {
+  await prisma.shippingLabel.create({
+    data: {
       orderId: order2.id,
-      paymentMethodId: interacETransfer.id,
+      trackingNumber: '1Z999AA1234567891',
+      carrier: 'FedEx',
+      labelUrl: 'https://example.com/shipping-label-2.pdf',
+    },
+  });
+
+  // Create sample payments
+  await prisma.payment.create({
+    data: {
+      orderId: order1.id,
+      paymentMethodId: 1, // Assuming first payment method
+      amount: 1200.00,
+      status: 'COMPLETED',
+      processedAt: new Date('2024-01-20'),
+    },
+  });
+
+  await prisma.payment.create({
+    data: {
+      orderId: order2.id,
+      paymentMethodId: 2, // Assuming second payment method
       amount: 720.00,
-      transactionId: 'ET-2024-001',
-      status: 'COMPLETED',
-      processedAt: new Date(),
+      status: 'PENDING',
     },
   });
 
-  await prisma.payment.upsert({
-    where: { transactionId: 'ET-2024-002' },
-    update: {},
-    create: {
-      orderId: order5.id,
-      paymentMethodId: interacETransfer.id,
-      amount: 380.00,
-      transactionId: 'ET-2024-002',
-      status: 'COMPLETED',
-      processedAt: new Date(),
-    },
-  });
-
-  // Create order status history
+  // Create sample order status history
   await prisma.orderStatusHistory.createMany({
     data: [
       {
         orderId: order1.id,
         status: 'PENDING',
-        notes: 'Order created',
-        updatedBy: operatorStaff.id,
+        notes: 'Order submitted by customer',
+        updatedBy: staffUser.id,
       },
       {
         orderId: order1.id,
         status: 'PROCESSING',
-        notes: 'Device received',
-        updatedBy: inspectorStaff.id,
+        notes: 'Device received and being evaluated',
+        updatedBy: staffUser.id,
+      },
+      {
+        orderId: order1.id,
+        status: 'COMPLETED',
+        notes: 'Payment processed and order completed',
+        updatedBy: staffUser.id,
       },
       {
         orderId: order2.id,
         status: 'PENDING',
-        notes: 'Order created',
-        updatedBy: operatorStaff.id,
+        notes: 'Order submitted by customer',
+        updatedBy: staffUser.id,
       },
       {
         orderId: order2.id,
         status: 'PROCESSING',
-        notes: 'Device received',
-        updatedBy: inspectorStaff.id,
-      },
-      {
-        orderId: order2.id,
-        status: 'COMPLETED',
-        notes: 'Payment processed',
-        updatedBy: operatorStaff.id,
+        notes: 'Device evaluation in progress',
+        updatedBy: staffUser.id,
       },
       {
         orderId: order3.id,
         status: 'PENDING',
-        notes: 'Order created',
-        updatedBy: operatorStaff.id,
-      },
-      {
-        orderId: order4.id,
-        status: 'PENDING',
-        notes: 'Order created',
-        updatedBy: operatorStaff.id,
-      },
-      {
-        orderId: order4.id,
-        status: 'PROCESSING',
-        notes: 'Device received',
-        updatedBy: inspectorStaff.id,
-      },
-      {
-        orderId: order5.id,
-        status: 'PENDING',
-        notes: 'Order created',
-        updatedBy: operatorStaff.id,
-      },
-      {
-        orderId: order5.id,
-        status: 'PROCESSING',
-        notes: 'Device received',
-        updatedBy: inspectorStaff.id,
-      },
-      {
-        orderId: order5.id,
-        status: 'COMPLETED',
-        notes: 'Payment processed',
-        updatedBy: operatorStaff.id,
+        notes: 'Order submitted by customer',
+        updatedBy: staffUser.id,
       },
     ],
   });
 
-  console.log('✅ Database seeded successfully!');
+  console.log('✅ Created sample order data');
+
+  console.log('🎉 Database seeding completed successfully!');
 }
 
 main()

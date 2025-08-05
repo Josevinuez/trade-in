@@ -186,7 +186,7 @@ export default function StaffDashboard() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('staffToken');
+    const token = localStorage.getItem('staffAuthToken');
     if (!token) {
       router.push('/staff-login');
       return;
@@ -194,23 +194,20 @@ export default function StaffDashboard() {
 
     const validateToken = async () => {
       try {
-        const response = await fetch('/api/auth/staff-login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setStaff(data.staff);
+        // For demo purposes, just check if token exists
+        const staffEmail = localStorage.getItem('staffEmail');
+        if (token && staffEmail) {
+          setStaff({ email: staffEmail, role: 'staff' });
           setIsLoading(false);
         } else {
-          localStorage.removeItem('staffToken');
+          localStorage.removeItem('staffAuthToken');
+          localStorage.removeItem('staffEmail');
           router.push('/staff-login');
         }
       } catch (error) {
         console.error('Token validation error:', error);
-        localStorage.removeItem('staffToken');
+        localStorage.removeItem('staffAuthToken');
+        localStorage.removeItem('staffEmail');
         router.push('/staff-login');
       }
     };
@@ -545,7 +542,7 @@ export default function StaffDashboard() {
   const handleLogout = () => {
     localStorage.removeItem('staffAuthToken');
     localStorage.removeItem('staffEmail');
-    router.push('/');
+    router.push('/staff-login');
   };
 
   const getStatusColor = (status: string) => {
