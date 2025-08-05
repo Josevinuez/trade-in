@@ -29,10 +29,10 @@ interface DeviceModel {
   storageOptions: Array<{
     id: number;
     storage: string;
-    excellentPrice: number;
-    goodPrice: number;
-    fairPrice: number;
-    poorPrice: number;
+    excellentPrice: string | number;
+    goodPrice: string | number;
+    fairPrice: string | number;
+    poorPrice: string | number;
   }>;
 }
 
@@ -204,16 +204,16 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
         let price = 0;
         switch (condition.name.toLowerCase()) {
           case 'excellent':
-            price = storageOption.excellentPrice;
+            price = Number(storageOption.excellentPrice) || 0;
             break;
           case 'good':
-            price = storageOption.goodPrice;
+            price = Number(storageOption.goodPrice) || 0;
             break;
           case 'fair':
-            price = storageOption.fairPrice;
+            price = Number(storageOption.fairPrice) || 0;
             break;
           case 'poor':
-            price = storageOption.poorPrice;
+            price = Number(storageOption.poorPrice) || 0;
             break;
         }
         setQuoteAmount(price);
@@ -446,7 +446,7 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
                 <div className="border-t pt-4">
                   <div className="flex justify-between text-xl font-bold">
                     <span>Your Quote:</span>
-                    <span className="text-green-600">${quoteAmount.toFixed(2)}</span>
+                    <span className="text-green-600">${(Number(quoteAmount) || 0).toFixed(2)}</span>
                   </div>
                 </div>
               </CardContent>
