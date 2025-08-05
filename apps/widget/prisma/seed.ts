@@ -195,32 +195,158 @@ async function main() {
   await prisma.deviceStorageOption.createMany({
     data: [
       // iPhone 15 Pro storage options
-      { modelId: iphone15Pro.id, storage: '128GB', price: 1200.00 },
-      { modelId: iphone15Pro.id, storage: '256GB', price: 1350.00 },
-      { modelId: iphone15Pro.id, storage: '512GB', price: 1500.00 },
-      { modelId: iphone15Pro.id, storage: '1TB', price: 1650.00 },
+      { 
+        modelId: iphone15Pro.id, 
+        storage: '128GB', 
+        excellentPrice: 1200.00,
+        goodPrice: 1080.00,
+        fairPrice: 960.00,
+        poorPrice: 840.00
+      },
+      { 
+        modelId: iphone15Pro.id, 
+        storage: '256GB', 
+        excellentPrice: 1350.00,
+        goodPrice: 1215.00,
+        fairPrice: 1080.00,
+        poorPrice: 945.00
+      },
+      { 
+        modelId: iphone15Pro.id, 
+        storage: '512GB', 
+        excellentPrice: 1500.00,
+        goodPrice: 1350.00,
+        fairPrice: 1200.00,
+        poorPrice: 1050.00
+      },
+      { 
+        modelId: iphone15Pro.id, 
+        storage: '1TB', 
+        excellentPrice: 1650.00,
+        goodPrice: 1485.00,
+        fairPrice: 1320.00,
+        poorPrice: 1155.00
+      },
       
       // Samsung Galaxy S24 storage options
-      { modelId: samsungS24.id, storage: '128GB', price: 1100.00 },
-      { modelId: samsungS24.id, storage: '256GB', price: 1250.00 },
-      { modelId: samsungS24.id, storage: '512GB', price: 1400.00 },
+      { 
+        modelId: samsungS24.id, 
+        storage: '128GB', 
+        excellentPrice: 1100.00,
+        goodPrice: 990.00,
+        fairPrice: 880.00,
+        poorPrice: 770.00
+      },
+      { 
+        modelId: samsungS24.id, 
+        storage: '256GB', 
+        excellentPrice: 1250.00,
+        goodPrice: 1125.00,
+        fairPrice: 1000.00,
+        poorPrice: 875.00
+      },
+      { 
+        modelId: samsungS24.id, 
+        storage: '512GB', 
+        excellentPrice: 1400.00,
+        goodPrice: 1260.00,
+        fairPrice: 1120.00,
+        poorPrice: 980.00
+      },
       
       // iPad Pro storage options
-      { modelId: ipadPro.id, storage: '128GB', price: 1200.00 },
-      { modelId: ipadPro.id, storage: '256GB', price: 1350.00 },
-      { modelId: ipadPro.id, storage: '512GB', price: 1500.00 },
-      { modelId: ipadPro.id, storage: '1TB', price: 1650.00 },
-      { modelId: ipadPro.id, storage: '2TB', price: 1800.00 },
+      { 
+        modelId: ipadPro.id, 
+        storage: '128GB', 
+        excellentPrice: 1200.00,
+        goodPrice: 1080.00,
+        fairPrice: 960.00,
+        poorPrice: 840.00
+      },
+      { 
+        modelId: ipadPro.id, 
+        storage: '256GB', 
+        excellentPrice: 1350.00,
+        goodPrice: 1215.00,
+        fairPrice: 1080.00,
+        poorPrice: 945.00
+      },
+      { 
+        modelId: ipadPro.id, 
+        storage: '512GB', 
+        excellentPrice: 1500.00,
+        goodPrice: 1350.00,
+        fairPrice: 1200.00,
+        poorPrice: 1050.00
+      },
+      { 
+        modelId: ipadPro.id, 
+        storage: '1TB', 
+        excellentPrice: 1650.00,
+        goodPrice: 1485.00,
+        fairPrice: 1320.00,
+        poorPrice: 1155.00
+      },
+      { 
+        modelId: ipadPro.id, 
+        storage: '2TB', 
+        excellentPrice: 1800.00,
+        goodPrice: 1620.00,
+        fairPrice: 1440.00,
+        poorPrice: 1260.00
+      },
       
       // MacBook Air storage options
-      { modelId: macbookAir.id, storage: '256GB', price: 1500.00 },
-      { modelId: macbookAir.id, storage: '512GB', price: 1700.00 },
-      { modelId: macbookAir.id, storage: '1TB', price: 1900.00 },
-      { modelId: macbookAir.id, storage: '2TB', price: 2100.00 },
+      { 
+        modelId: macbookAir.id, 
+        storage: '256GB', 
+        excellentPrice: 1500.00,
+        goodPrice: 1350.00,
+        fairPrice: 1200.00,
+        poorPrice: 1050.00
+      },
+      { 
+        modelId: macbookAir.id, 
+        storage: '512GB', 
+        excellentPrice: 1700.00,
+        goodPrice: 1530.00,
+        fairPrice: 1360.00,
+        poorPrice: 1190.00
+      },
+      { 
+        modelId: macbookAir.id, 
+        storage: '1TB', 
+        excellentPrice: 1900.00,
+        goodPrice: 1710.00,
+        fairPrice: 1520.00,
+        poorPrice: 1330.00
+      },
+      { 
+        modelId: macbookAir.id, 
+        storage: '2TB', 
+        excellentPrice: 2100.00,
+        goodPrice: 1890.00,
+        fairPrice: 1680.00,
+        poorPrice: 1470.00
+      },
       
       // Apple Watch storage options
-      { modelId: appleWatch.id, storage: '41mm', price: 400.00 },
-      { modelId: appleWatch.id, storage: '45mm', price: 450.00 },
+      { 
+        modelId: appleWatch.id, 
+        storage: '41mm', 
+        excellentPrice: 400.00,
+        goodPrice: 360.00,
+        fairPrice: 320.00,
+        poorPrice: 280.00
+      },
+      { 
+        modelId: appleWatch.id, 
+        storage: '45mm', 
+        excellentPrice: 450.00,
+        goodPrice: 405.00,
+        fairPrice: 360.00,
+        poorPrice: 315.00
+      },
     ],
     skipDuplicates: true,
   });
