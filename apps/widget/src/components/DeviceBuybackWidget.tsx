@@ -78,6 +78,7 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
   useEffect(() => {
     const fetchDeviceData = async () => {
       try {
+        console.log('🔍 Fetching device data...');
         const [catalogResponse, conditionsResponse] = await Promise.all([
           fetch('/api/devices/catalog'),
           fetch('/api/devices/conditions')
@@ -85,16 +86,23 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
         
         if (catalogResponse.ok) {
           const catalogData = await catalogResponse.json();
+          console.log('📱 Catalog data:', catalogData);
+          console.log('📱 Models with storage options:', catalogData.models?.map((m: any) => ({
+            name: m.name,
+            storageOptionsCount: m.storageOptions?.length || 0,
+            storageOptions: m.storageOptions?.map((s: any) => s.storage) || []
+          })));
           setDeviceCategories(catalogData.categories || []);
           setDeviceModels(catalogData.models || []);
         }
         
         if (conditionsResponse.ok) {
           const conditionsData = await conditionsResponse.json();
+          console.log('📱 Conditions data:', conditionsData);
           setDeviceConditions(conditionsData.conditions || []);
         }
       } catch (error) {
-        console.error('Error fetching device data:', error);
+        console.error('❌ Error fetching device data:', error);
       }
     };
 
@@ -354,6 +362,8 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
         );
 
       case 'storage':
+        console.log('🔍 Storage step - selectedDeviceModel:', selectedDeviceModel);
+        console.log('🔍 Storage step - storageOptions:', selectedDeviceModel?.storageOptions);
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-center">Select storage capacity</h2>
@@ -380,6 +390,7 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
             ) : (
               <div className="text-center py-8">
                 <p className="text-gray-500">No storage options available for this device.</p>
+                <p className="text-sm text-gray-400 mt-2">Selected model: {selectedDeviceModel?.name}</p>
               </div>
             )}
           </div>

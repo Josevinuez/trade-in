@@ -215,60 +215,143 @@ async function main() {
     },
   });
 
+  // Add more device models
+  const googlePixel8 = await prisma.deviceModel.create({
+    data: {
+      name: 'Google Pixel 8',
+      modelNumber: 'G8',
+      releaseYear: 2023,
+      displayOrder: 7,
+      categoryId: smartphoneCategory.id,
+      brandId: googleBrand.id,
+      isActive: true,
+    },
+  });
+
+  const samsungTabS9 = await prisma.deviceModel.create({
+    data: {
+      name: 'Samsung Galaxy Tab S9',
+      modelNumber: 'SM-X710',
+      releaseYear: 2023,
+      displayOrder: 8,
+      categoryId: tabletCategory.id,
+      brandId: samsungBrand.id,
+      isActive: true,
+    },
+  });
+
+  const surfaceLaptop = await prisma.deviceModel.create({
+    data: {
+      name: 'Surface Laptop 5',
+      modelNumber: 'SL5',
+      releaseYear: 2022,
+      displayOrder: 9,
+      categoryId: laptopCategory.id,
+      brandId: microsoftBrand.id,
+      isActive: true,
+    },
+  });
+
+  const galaxyWatch = await prisma.deviceModel.create({
+    data: {
+      name: 'Samsung Galaxy Watch 6',
+      modelNumber: 'SM-R955',
+      releaseYear: 2023,
+      displayOrder: 10,
+      categoryId: watchCategory.id,
+      brandId: samsungBrand.id,
+      isActive: true,
+    },
+  });
+
   console.log('✅ Created device models');
 
   // Create storage options for iPhone 15 Pro
   await prisma.deviceStorageOption.createMany({
     data: [
-      { modelId: iphone15Pro.id, storage: '128GB', excellentPrice: 1200.00, goodPrice: 960.00, fairPrice: 720.00, poorPrice: 480.00 },
-      { modelId: iphone15Pro.id, storage: '256GB', excellentPrice: 1350.00, goodPrice: 1080.00, fairPrice: 810.00, poorPrice: 540.00 },
-      { modelId: iphone15Pro.id, storage: '512GB', excellentPrice: 1500.00, goodPrice: 1200.00, fairPrice: 900.00, poorPrice: 600.00 },
-      { modelId: iphone15Pro.id, storage: '1TB', excellentPrice: 1650.00, goodPrice: 1320.00, fairPrice: 990.00, poorPrice: 660.00 },
+      { modelId: iphone15Pro.id, storage: '128GB', excellentPrice: 1200.00, goodPrice: 960.00, fairPrice: 720.00, poorPrice: 480.00, isActive: true },
+      { modelId: iphone15Pro.id, storage: '256GB', excellentPrice: 1350.00, goodPrice: 1080.00, fairPrice: 810.00, poorPrice: 540.00, isActive: true },
+      { modelId: iphone15Pro.id, storage: '512GB', excellentPrice: 1500.00, goodPrice: 1200.00, fairPrice: 900.00, poorPrice: 600.00, isActive: true },
+      { modelId: iphone15Pro.id, storage: '1TB', excellentPrice: 1650.00, goodPrice: 1320.00, fairPrice: 990.00, poorPrice: 660.00, isActive: true },
     ],
   });
 
   // Create storage options for iPhone 15
   await prisma.deviceStorageOption.createMany({
     data: [
-      { modelId: iphone15.id, storage: '128GB', excellentPrice: 1000.00, goodPrice: 800.00, fairPrice: 600.00, poorPrice: 400.00 },
-      { modelId: iphone15.id, storage: '256GB', excellentPrice: 1150.00, goodPrice: 920.00, fairPrice: 690.00, poorPrice: 460.00 },
-      { modelId: iphone15.id, storage: '512GB', excellentPrice: 1300.00, goodPrice: 1040.00, fairPrice: 780.00, poorPrice: 520.00 },
+      { modelId: iphone15.id, storage: '128GB', excellentPrice: 1000.00, goodPrice: 800.00, fairPrice: 600.00, poorPrice: 400.00, isActive: true },
+      { modelId: iphone15.id, storage: '256GB', excellentPrice: 1150.00, goodPrice: 920.00, fairPrice: 690.00, poorPrice: 460.00, isActive: true },
+      { modelId: iphone15.id, storage: '512GB', excellentPrice: 1300.00, goodPrice: 1040.00, fairPrice: 780.00, poorPrice: 520.00, isActive: true },
     ],
   });
 
   // Create storage options for Samsung S24
   await prisma.deviceStorageOption.createMany({
     data: [
-      { modelId: samsungS24.id, storage: '128GB', excellentPrice: 900.00, goodPrice: 720.00, fairPrice: 540.00, poorPrice: 360.00 },
-      { modelId: samsungS24.id, storage: '256GB', excellentPrice: 1050.00, goodPrice: 840.00, fairPrice: 630.00, poorPrice: 420.00 },
-      { modelId: samsungS24.id, storage: '512GB', excellentPrice: 1200.00, goodPrice: 960.00, fairPrice: 720.00, poorPrice: 480.00 },
+      { modelId: samsungS24.id, storage: '128GB', excellentPrice: 900.00, goodPrice: 720.00, fairPrice: 540.00, poorPrice: 360.00, isActive: true },
+      { modelId: samsungS24.id, storage: '256GB', excellentPrice: 1050.00, goodPrice: 840.00, fairPrice: 630.00, poorPrice: 420.00, isActive: true },
+      { modelId: samsungS24.id, storage: '512GB', excellentPrice: 1200.00, goodPrice: 960.00, fairPrice: 720.00, poorPrice: 480.00, isActive: true },
     ],
   });
 
   // Create storage options for iPad Pro
   await prisma.deviceStorageOption.createMany({
     data: [
-      { modelId: ipadPro.id, storage: '128GB', excellentPrice: 800.00, goodPrice: 640.00, fairPrice: 480.00, poorPrice: 320.00 },
-      { modelId: ipadPro.id, storage: '256GB', excellentPrice: 950.00, goodPrice: 760.00, fairPrice: 570.00, poorPrice: 380.00 },
-      { modelId: ipadPro.id, storage: '512GB', excellentPrice: 1100.00, goodPrice: 880.00, fairPrice: 660.00, poorPrice: 440.00 },
-      { modelId: ipadPro.id, storage: '1TB', excellentPrice: 1250.00, goodPrice: 1000.00, fairPrice: 750.00, poorPrice: 500.00 },
+      { modelId: ipadPro.id, storage: '128GB', excellentPrice: 800.00, goodPrice: 640.00, fairPrice: 480.00, poorPrice: 320.00, isActive: true },
+      { modelId: ipadPro.id, storage: '256GB', excellentPrice: 950.00, goodPrice: 760.00, fairPrice: 570.00, poorPrice: 380.00, isActive: true },
+      { modelId: ipadPro.id, storage: '512GB', excellentPrice: 1100.00, goodPrice: 880.00, fairPrice: 660.00, poorPrice: 440.00, isActive: true },
+      { modelId: ipadPro.id, storage: '1TB', excellentPrice: 1250.00, goodPrice: 1000.00, fairPrice: 750.00, poorPrice: 500.00, isActive: true },
     ],
   });
 
-  // Create storage options for MacBook Air
+  // Create storage options for MacBook Air M2
   await prisma.deviceStorageOption.createMany({
     data: [
-      { modelId: macbookAir.id, storage: '256GB', excellentPrice: 1200.00, goodPrice: 960.00, fairPrice: 720.00, poorPrice: 480.00 },
-      { modelId: macbookAir.id, storage: '512GB', excellentPrice: 1400.00, goodPrice: 1120.00, fairPrice: 840.00, poorPrice: 560.00 },
-      { modelId: macbookAir.id, storage: '1TB', excellentPrice: 1600.00, goodPrice: 1280.00, fairPrice: 960.00, poorPrice: 640.00 },
+      { modelId: macbookAir.id, storage: '256GB', excellentPrice: 1200.00, goodPrice: 960.00, fairPrice: 720.00, poorPrice: 480.00, isActive: true },
+      { modelId: macbookAir.id, storage: '512GB', excellentPrice: 1400.00, goodPrice: 1120.00, fairPrice: 840.00, poorPrice: 560.00, isActive: true },
+      { modelId: macbookAir.id, storage: '1TB', excellentPrice: 1600.00, goodPrice: 1280.00, fairPrice: 960.00, poorPrice: 640.00, isActive: true },
     ],
   });
 
-  // Create storage options for Apple Watch
+  // Create storage options for Apple Watch Series 9
   await prisma.deviceStorageOption.createMany({
     data: [
-      { modelId: appleWatch.id, storage: '41mm', excellentPrice: 400.00, goodPrice: 320.00, fairPrice: 240.00, poorPrice: 160.00 },
-      { modelId: appleWatch.id, storage: '45mm', excellentPrice: 450.00, goodPrice: 360.00, fairPrice: 270.00, poorPrice: 180.00 },
+      { modelId: appleWatch.id, storage: '41mm', excellentPrice: 350.00, goodPrice: 280.00, fairPrice: 210.00, poorPrice: 140.00, isActive: true },
+      { modelId: appleWatch.id, storage: '45mm', excellentPrice: 400.00, goodPrice: 320.00, fairPrice: 240.00, poorPrice: 160.00, isActive: true },
+    ],
+  });
+
+  // Create storage options for Google Pixel 8
+  await prisma.deviceStorageOption.createMany({
+    data: [
+      { modelId: googlePixel8.id, storage: '128GB', excellentPrice: 700.00, goodPrice: 560.00, fairPrice: 420.00, poorPrice: 280.00, isActive: true },
+      { modelId: googlePixel8.id, storage: '256GB', excellentPrice: 850.00, goodPrice: 680.00, fairPrice: 510.00, poorPrice: 340.00, isActive: true },
+    ],
+  });
+
+  // Create storage options for Samsung Galaxy Tab S9
+  await prisma.deviceStorageOption.createMany({
+    data: [
+      { modelId: samsungTabS9.id, storage: '128GB', excellentPrice: 600.00, goodPrice: 480.00, fairPrice: 360.00, poorPrice: 240.00, isActive: true },
+      { modelId: samsungTabS9.id, storage: '256GB', excellentPrice: 750.00, goodPrice: 600.00, fairPrice: 450.00, poorPrice: 300.00, isActive: true },
+      { modelId: samsungTabS9.id, storage: '512GB', excellentPrice: 900.00, goodPrice: 720.00, fairPrice: 540.00, poorPrice: 360.00, isActive: true },
+    ],
+  });
+
+  // Create storage options for Surface Laptop 5
+  await prisma.deviceStorageOption.createMany({
+    data: [
+      { modelId: surfaceLaptop.id, storage: '256GB', excellentPrice: 800.00, goodPrice: 640.00, fairPrice: 480.00, poorPrice: 320.00, isActive: true },
+      { modelId: surfaceLaptop.id, storage: '512GB', excellentPrice: 1000.00, goodPrice: 800.00, fairPrice: 600.00, poorPrice: 400.00, isActive: true },
+      { modelId: surfaceLaptop.id, storage: '1TB', excellentPrice: 1200.00, goodPrice: 960.00, fairPrice: 720.00, poorPrice: 480.00, isActive: true },
+    ],
+  });
+
+  // Create storage options for Samsung Galaxy Watch 6
+  await prisma.deviceStorageOption.createMany({
+    data: [
+      { modelId: galaxyWatch.id, storage: '40mm', excellentPrice: 250.00, goodPrice: 200.00, fairPrice: 150.00, poorPrice: 100.00, isActive: true },
+      { modelId: galaxyWatch.id, storage: '44mm', excellentPrice: 300.00, goodPrice: 240.00, fairPrice: 180.00, poorPrice: 120.00, isActive: true },
     ],
   });
 

@@ -21,7 +21,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         orderBy: { priceMultiplier: 'desc' }
       }),
       prisma.deviceModel.findMany({
-        where: { isActive: true },
         include: {
           category: true,
           brand: true,
