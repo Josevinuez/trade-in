@@ -91,7 +91,7 @@ interface DeviceModel {
 export default function StaffDashboard() {
   const [staff, setStaff] = useState<{ email: string; role: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'orders' | 'clients' | 'management' | 'brands'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'clients' | 'management' | 'brands' | 'categories'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [devices, setDevices] = useState<DeviceModel[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -165,6 +165,16 @@ export default function StaffDashboard() {
   const [notificationTitle, setNotificationTitle] = useState('');
   const [notificationMessage, setNotificationMessage] = useState('');
   
+  // Categories management
+  const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [categoryFormData, setCategoryFormData] = useState({
+    name: '',
+    description: '',
+    icon: '',
+    isActive: true,
+  });
+  
   const router = useRouter();
 
   // Helper function to show notifications
@@ -176,30 +186,47 @@ export default function StaffDashboard() {
   };
 
   useEffect(() => {
-    // Check if staff is authenticated
-    const authToken = localStorage.getItem('staffAuthToken');
-    const staffEmail = localStorage.getItem('staffEmail');
-
-    if (authToken && staffEmail) {
-      setStaff({ email: staffEmail, role: 'staff' });
-      fetchOrders();
-    } else {
+    const token = localStorage.getItem('staffToken');
+    if (!token) {
       router.push('/staff-login');
+      return;
     }
-    setIsLoading(false);
+
+    const validateToken = async () => {
+      try {
+        const response = await fetch('/api/auth/staff-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setStaff(data.staff);
+          setIsLoading(false);
+        } else {
+          localStorage.removeItem('staffToken');
+          router.push('/staff-login');
+        }
+      } catch (error) {
+        console.error('Token validation error:', error);
+        localStorage.removeItem('staffToken');
+        router.push('/staff-login');
+      }
+    };
+
+    validateToken();
   }, [router]);
 
   useEffect(() => {
-    if (activeTab === 'management') {
+    if (staff) {
+      fetchOrders();
       fetchDeviceManagementData();
-    }
-    if (activeTab === 'brands') {
       fetchBrands();
-    }
-    if (activeTab === 'clients') {
       fetchClients();
+      fetchCategories();
     }
-  }, [activeTab]);
+  }, [staff]);
 
   const fetchOrders = async () => {
     setIsLoadingOrders(true);
@@ -262,12 +289,14 @@ export default function StaffDashboard() {
       if (response.ok) {
         const result = await response.json();
         setFormData(prev => ({ ...prev, imageUrl: result.imageUrl }));
+        showNotificationModal('success', 'Success', 'Image uploaded successfully!');
       } else {
-        alert('Failed to upload image');
+        const errorData = await response.json();
+        showNotificationModal('error', 'Error', `Failed to upload image: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload image');
+      showNotificationModal('error', 'Error', 'Failed to upload image. Please try again.');
     } finally {
       setUploadingImage(false);
     }
@@ -798,8 +827,117 @@ export default function StaffDashboard() {
   };
 
   const closeClientDetails = () => {
-    setShowClientDetails(false);
     setSelectedClient(null);
+  };
+
+  // Categories management functions
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/staff/devices?type=categories');
+      const data = await response.json();
+      setCategories(data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    try {
+      const response = await fetch('/api/staff/devices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'category',
+          data: categoryFormData,
+        }),
+      });
+
+      if (response.ok) {
+        setShowAddCategoryForm(false);
+        resetCategoryForm();
+        fetchCategories();
+        showNotificationModal('success', 'Success', 'Category added successfully!');
+      } else {
+        const errorData = await response.json();
+        showNotificationModal('error', 'Error', `Failed to add category: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error adding category:', error);
+      showNotificationModal('error', 'Error', 'Failed to add category. Please try again.');
+    }
+  };
+
+  const handleUpdateCategory = async () => {
+    if (!editingCategory) return;
+
+    try {
+      const response = await fetch(`/api/staff/devices/${editingCategory.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'category',
+          data: categoryFormData,
+        }),
+      });
+
+      if (response.ok) {
+        setEditingCategory(null);
+        resetCategoryForm();
+        fetchCategories();
+        showNotificationModal('success', 'Success', 'Category updated successfully!');
+      } else {
+        const errorData = await response.json();
+        showNotificationModal('error', 'Error', `Failed to update category: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating category:', error);
+      showNotificationModal('error', 'Error', 'Failed to update category. Please try again.');
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: number) => {
+    setConfirmTitle('Delete Category');
+    setConfirmMessage('Are you sure you want to delete this category? This action cannot be undone.');
+    setConfirmAction(() => async () => {
+      try {
+        const response = await fetch(`/api/staff/devices/${categoryId}`, {
+          method: 'DELETE',
+        });
+
+        if (response.ok) {
+          setCategories(categories.filter(category => category.id !== categoryId));
+          showNotificationModal('success', 'Success', 'Category deleted successfully!');
+        } else {
+          const errorData = await response.json();
+          showNotificationModal('error', 'Error', `Failed to delete category: ${errorData.error || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error('Error deleting category:', error);
+        showNotificationModal('error', 'Error', 'Failed to delete category. Please try again.');
+      }
+    });
+    setShowConfirmModal(true);
+  };
+
+  const handleEditCategory = (category: any) => {
+    setEditingCategory(category);
+    setCategoryFormData({
+      name: category.name,
+      description: category.description || '',
+      icon: category.icon || '',
+      isActive: category.isActive,
+    });
+    setShowAddCategoryForm(true);
+  };
+
+  const resetCategoryForm = () => {
+    setCategoryFormData({
+      name: '',
+      description: '',
+      icon: '',
+      isActive: true,
+    });
+    setEditingCategory(null);
   };
 
   // Filter clients based on search term
@@ -946,6 +1084,19 @@ export default function StaffDashboard() {
             <div className="flex items-center justify-center space-x-2">
               <BarChart3 className="w-4 h-4" />
               <span>Brand Management</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('categories')}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'categories'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <BarChart3 className="w-4 h-4" />
+              <span>Category Management</span>
             </div>
           </button>
         </div>
@@ -2375,6 +2526,215 @@ export default function StaffDashboard() {
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     {editingBrand ? 'Update Brand' : 'Add Brand'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Categories Tab */}
+        {activeTab === 'categories' && (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Category Management</h2>
+                <p className="text-gray-600 mt-1">Manage device categories and icons</p>
+              </div>
+              <button
+                onClick={() => setShowAddCategoryForm(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Category</span>
+              </button>
+            </div>
+
+            {/* Categories List */}
+            <div className="bg-white rounded-xl shadow-sm border">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">All Categories</h3>
+                {categories.length === 0 ? (
+                  <div className="text-center py-8">
+                    <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No categories found. Add your first category to get started.</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {categories.map((category) => (
+                      <div key={category.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                        <div className="flex items-center space-x-4">
+                          {category.icon && (
+                            <div className="w-12 h-12 rounded-lg flex items-center justify-center">
+                              {category.icon}
+                            </div>
+                          )}
+                          <div>
+                            <div className="text-lg font-medium text-gray-900">{category.name}</div>
+                            <div className="text-sm text-gray-500">
+                              {category._count?.deviceModels || 0} device models
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            category.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {category.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                          <div className="flex items-center space-x-2">
+                            <button 
+                              onClick={() => handleEditCategory(category)}
+                              className="text-blue-600 hover:text-blue-900 flex items-center space-x-1"
+                            >
+                              <Edit className="w-4 h-4" />
+                              <span>Edit</span>
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteCategory(category.id)}
+                              className="text-red-600 hover:text-red-900 flex items-center space-x-1"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add/Edit Category Modal */}
+        {showAddCategoryForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {editingCategory ? 'Edit Category' : 'Add New Category'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowAddCategoryForm(false);
+                    resetCategoryForm();
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <span className="sr-only">Close</span>
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (editingCategory) {
+                  handleUpdateCategory();
+                } else {
+                  handleAddCategory();
+                }
+              }}>
+                <div className="space-y-4">
+                  {/* Category Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Category Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={categoryFormData.name}
+                      onChange={(e) => setCategoryFormData({ ...categoryFormData, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="e.g., Smartphones, Tablets, Laptops"
+                    />
+                  </div>
+
+                  {/* Category Description */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={categoryFormData.description}
+                      onChange={(e) => setCategoryFormData({ ...categoryFormData, description: e.target.value })}
+                      placeholder="Enter a brief description of the category..."
+                      rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Category Icon */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Category Icon
+                    </label>
+                    <input
+                      type="text"
+                      value={categoryFormData.icon}
+                      onChange={(e) => setCategoryFormData({ ...categoryFormData, icon: e.target.value })}
+                      placeholder="Enter a category icon (e.g., <IconComponent />)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Category Status */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category Status</label>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        type="button"
+                        onClick={() => setCategoryFormData({ ...categoryFormData, isActive: true })}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                          categoryFormData.isActive
+                            ? 'bg-green-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        Active
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCategoryFormData({ ...categoryFormData, isActive: false })}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                          !categoryFormData.isActive
+                            ? 'bg-red-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        Inactive
+                      </button>
+                      <span className="text-sm text-gray-500">
+                        {categoryFormData.isActive
+                          ? 'Category will appear in device forms'
+                          : 'Category will be hidden from device forms'
+                        }
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddCategoryForm(false);
+                      resetCategoryForm();
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    {editingCategory ? 'Update Category' : 'Add Category'}
                   </button>
                 </div>
               </form>
