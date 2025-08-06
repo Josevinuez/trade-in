@@ -24,6 +24,7 @@ interface DeviceCategory {
 interface DeviceModel {
   id: number;
   name: string;
+  imageUrl?: string;
   brand: { 
     name: string;
     logoUrl?: string;
@@ -391,7 +392,16 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="flex flex-col items-center space-y-2">
+                  <div className="flex flex-col items-center space-y-3">
+                    {model.imageUrl ? (
+                      <img src={model.imageUrl} alt={model.name} className="w-16 h-16 object-contain" />
+                    ) : (
+                      <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                        <span className="text-lg font-bold text-gray-600">
+                          {model.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
                     <span className="font-medium text-center">{model.name}</span>
                   </div>
                 </motion.button>

@@ -568,12 +568,18 @@ export default function StaffDeviceManagement() {
                       </Badge>
                     </div>
                     <div className="flex items-center space-x-4">
-                      {device.imageUrl && (
+                      {device.imageUrl ? (
                         <img 
                           src={device.imageUrl} 
                           alt={device.name} 
-                          className="w-16 h-16 object-cover rounded-lg border"
+                          className="w-20 h-20 object-contain rounded-lg border"
                         />
+                      ) : (
+                        <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center border">
+                          <span className="text-lg font-bold text-gray-600">
+                            {device.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
                       )}
                       <div>
                         <h3 className="text-lg font-semibold">{device.name}</h3>

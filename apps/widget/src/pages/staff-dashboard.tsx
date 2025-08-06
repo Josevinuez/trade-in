@@ -2402,12 +2402,14 @@ export default function StaffDashboard() {
                         <tr key={device.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4">
                             <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10">
+                              <div className="flex-shrink-0 h-12 w-12">
                                 {device.imageUrl ? (
-                                  <img className="h-10 w-10 rounded-lg object-cover" src={device.imageUrl} alt={device.name} />
+                                  <img className="h-12 w-12 rounded-lg object-contain" src={device.imageUrl} alt={device.name} />
                                 ) : (
-                                  <div className="h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center">
-                                    {getCategoryIcon(device.category?.name || 'smartphone')}
+                                  <div className="h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center">
+                                    <span className="text-sm font-bold text-gray-600">
+                                      {device.name.charAt(0).toUpperCase()}
+                                    </span>
                                   </div>
                                 )}
                               </div>
