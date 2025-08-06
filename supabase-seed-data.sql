@@ -20,7 +20,7 @@ INSERT INTO "DeviceBrand" ("name", "logoUrl", "isActive") VALUES
 ('OnePlus', 'https://cdn-icons-png.flaticon.com/512/0/191.png', true)
 ON CONFLICT ("name") DO NOTHING;
 
--- Insert device conditions
+-- Insert device conditions with descriptions
 INSERT INTO "DeviceCondition" ("name", "description", "isActive") VALUES
 ('Excellent', 'Like new condition with minimal wear', true),
 ('Good', 'Minor wear and tear, fully functional', true),

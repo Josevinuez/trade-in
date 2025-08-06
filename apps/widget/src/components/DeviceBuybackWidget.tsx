@@ -43,7 +43,7 @@ interface DeviceModel {
 interface DeviceCondition {
   id: number;
   name: string;
-  multiplier: number;
+  description?: string;
 }
 
 const STEPS = ['type', 'brand', 'model', 'storage', 'condition', 'quote', 'customerInfo'] as const;
@@ -462,10 +462,16 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="flex flex-col items-center space-y-2">
-                    <span className="font-medium capitalize">{condition.name}</span>
-                    <span className="text-sm text-gray-600">
-                      {condition.multiplier * 100}% of original value
+                  <div className="flex flex-col items-center space-y-3">
+                    <span className="font-medium capitalize text-lg">{condition.name}</span>
+                    <span className="text-sm text-gray-600 text-center">
+                      {condition.description || 
+                        (condition.name === 'Excellent' && 'Like new condition with minimal wear') ||
+                        (condition.name === 'Good' && 'Minor wear and tear, fully functional') ||
+                        (condition.name === 'Fair' && 'Visible wear but still functional') ||
+                        (condition.name === 'Poor' && 'Significant wear or damage') ||
+                        'Select this condition'
+                      }
                     </span>
                   </div>
                 </motion.button>
