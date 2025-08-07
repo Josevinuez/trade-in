@@ -3,6 +3,7 @@ import { AppDataSource } from '../index';
 import { Transaction } from '../entities/Transaction';
 import { Quote } from '../entities/Quote';
 import { z } from 'zod';
+import { sendTradeInEmail } from '../utils/email';
 
 const router = Router();
 
@@ -47,6 +48,18 @@ router.post('/', async (req, res) => {
     });
 
     const savedTransaction = await transactionRepository.save(transaction);
+
+    // Send confirmation email to the customer
+    try {
+      await sendTradeInEmail(
+        validatedData.customerInfo.email,
+        savedTransaction.id,
+        validatedData.customerInfo.name
+      );
+    } catch (emailError) {
+      console.error('Error sending confirmation email:', emailError);
+    }
+
     res.status(201).json({ data: savedTransaction });
   } catch (error) {
     if (error instanceof z.ZodError) {
