@@ -240,7 +240,7 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
         throw new Error('Storage option not found');
       }
 
-      const response = await fetch('/api/trade-in/submit', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/trade-in/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
