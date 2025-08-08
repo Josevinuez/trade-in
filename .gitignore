@@ -116,4 +116,4 @@ temp/
 *.sw?
 
 # Local Netlify folder
-.netlify 
+.netlify ".env" 
