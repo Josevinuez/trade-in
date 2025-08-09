@@ -7,7 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'PUT') {
     try {
-      const { status, finalAmount, notes, trackingNumber, paymentMethod } = req.body;
+      const { status, finalAmount, notes, trackingNumber, paymentMethod, sendForApproval, deviceConditionId } = req.body as any;
 
       const updateData: any = {
         status,
@@ -16,6 +16,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (finalAmount !== undefined) {
         updateData.finalAmount = finalAmount;
+      }
+
+      if (deviceConditionId !== undefined) {
+        updateData.deviceConditionId = parseInt(deviceConditionId);
       }
 
       if (notes !== undefined) {
@@ -30,6 +34,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         updateData.processedAt = new Date().toISOString();
       } else if (status === 'COMPLETED') {
         updateData.completedAt = new Date().toISOString();
+      }
+
+      // When staff wants to send revised amount for customer approval
+      if (sendForApproval) {
+        updateData.status = 'AWAITING_APPROVAL';
       }
 
       const { data: order, error } = await supabaseAdmin
@@ -56,8 +65,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .from('OrderStatusHistory')
         .insert({
           orderId,
-          status,
-          notes: notes || `Status updated to ${status}`,
+          status: updateData.status,
+          notes: notes || (sendForApproval ? 'Sent to customer for approval' : `Status updated to ${updateData.status}`),
           updatedBy: 1 // Default staff member
         });
 

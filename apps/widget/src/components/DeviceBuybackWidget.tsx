@@ -78,6 +78,7 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [orderNumber, setOrderNumber] = useState<string>('');
+  const [showTerms, setShowTerms] = useState(false);
 
   // Fetch device data from backend
   useEffect(() => {
@@ -240,7 +241,9 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
         throw new Error('Storage option not found');
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/trade-in/submit`, {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? '';
+      const submitUrl = `${apiBase ? apiBase : ''}/api/trade-in/submit`;
+      const response = await fetch(submitUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -287,11 +290,13 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
           shippingLabel: false,
         });
       } else {
-        throw new Error('Failed to submit trade-in');
+        const errorText = await response.text().catch(() => '');
+        throw new Error(`Failed to submit trade-in (${response.status}): ${errorText}`);
       }
     } catch (error) {
       console.error('Error submitting trade-in:', error);
-      alert('Failed to submit trade-in. Please try again.');
+      const message = error instanceof Error ? error.message : 'Failed to submit trade-in. Please try again.';
+      alert(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -596,15 +601,26 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
                   />
                   <span className="text-sm">I need a shipping label</span>
                 </label>
-                <label className="flex items-center space-x-2">
+                <div className="flex items-start space-x-2">
                   <input
+                    id="accept-terms"
                     type="checkbox"
                     checked={customerInfo.acceptTerms}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, acceptTerms: e.target.checked })}
-                    className="rounded"
+                    className="mt-1 rounded"
                   />
-                  <span className="text-sm">I accept the terms and conditions</span>
-                </label>
+                  <label htmlFor="accept-terms" className="text-sm">
+                    I have read and agree to the Terms of Service.
+                    {" "}
+                    <button
+                      type="button"
+                      onClick={() => setShowTerms(true)}
+                      className="text-blue-600 hover:underline ml-1"
+                    >
+                      View terms
+                    </button>
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -614,6 +630,125 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
         return null;
     }
   };
+
+  // Success Modal should take precedence over other UI
+  if (showSuccess) {
+    return (
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+          >
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                <Check className="h-6 w-6 text-green-600" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Trade-In Submitted Successfully!
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Your form was submitted. A team member will review your order shortly.
+              </p>
+              {orderNumber && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-gray-600 mb-1">Order Number:</p>
+                  <p className="text-lg font-mono font-bold text-gray-900">{orderNumber}</p>
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mb-6">
+                Save this order number to track your order status.
+              </p>
+              <button
+                onClick={() => {
+                  setShowSuccess(false);
+                  setShowForm?.(false);
+                }}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
+
+  // Terms of Service Modal (shown before final submission)
+  if (showTerms) {
+    return (
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6"
+          >
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Terms of Service</h3>
+              <button
+                aria-label="Close"
+                className="p-2 rounded-full hover:bg-gray-100"
+                onClick={() => setShowTerms(false)}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4 text-sm text-gray-700">
+              <p>
+                By submitting your trade-in, you acknowledge and agree to the following:
+              </p>
+              <ul className="list-disc pl-5 space-y-2">
+                <li>
+                  The device will undergo an inspection to verify its functional and cosmetic condition.
+                </li>
+                <li>
+                  The quoted amount is an estimate and is subject to change after the condition review.
+                </li>
+                <li>
+                  If you reject the final offer after inspection, you may be charged a processing fee and will be responsible for return shipping costs.
+                </li>
+              </ul>
+              <p>
+                If you agree to these terms, select "I Agree" below to proceed.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowTerms(false)}
+                className="px-4 py-2 text-gray-700 hover:text-gray-900"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setCustomerInfo({ ...customerInfo, acceptTerms: true });
+                  setShowTerms(false);
+                }}
+                className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                I Agree
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
 
   // If not showing form, show the landing page
   if (!showForm) {
@@ -725,55 +860,4 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
       </motion.div>
     </AnimatePresence>
   );
-
-  // Success Modal
-  if (showSuccess) {
-    return (
-      <AnimatePresence>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-        >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
-          >
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <Check className="h-6 w-6 text-green-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Trade-In Submitted Successfully!
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Your order has been submitted and is being processed.
-              </p>
-              {orderNumber && (
-                <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-gray-600 mb-1">Order Number:</p>
-                  <p className="text-lg font-mono font-bold text-gray-900">{orderNumber}</p>
-                </div>
-              )}
-              <p className="text-xs text-gray-500 mb-6">
-                Please save this order number for future reference. You can track your order status using this number.
-              </p>
-              <button
-                onClick={() => {
-                  setShowSuccess(false);
-                  setShowForm?.(false);
-                }}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Close
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      </AnimatePresence>
-    );
-  }
 } 

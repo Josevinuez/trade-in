@@ -4,10 +4,18 @@ import { Smartphone, Menu, X, User, Shield } from 'lucide-react';
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+  const handleNavigate = (sectionId: string) => {
+    const isHome = typeof window !== 'undefined' && window.location.pathname === '/';
+    if (isHome) {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        // Fallback to hash navigation
+        window.location.hash = `#${sectionId}`;
+      }
+    } else {
+      window.location.href = `/#${sectionId}`;
     }
     setIsMenuOpen(false);
   };
@@ -21,35 +29,35 @@ export function Header() {
     <header className="bg-white shadow-sm border-b sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+          <a href="/" className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <Smartphone className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-gray-900">TradeIn Pro</span>
-          </div>
+          </a>
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             <button 
-              onClick={() => scrollToSection('how-it-works')}
+              onClick={() => handleNavigate('how-it-works')}
               className="text-gray-600 hover:text-blue-600 transition-colors"
             >
               How it Works
             </button>
             <button 
-              onClick={() => scrollToSection('devices')}
+              onClick={() => handleNavigate('devices')}
               className="text-gray-600 hover:text-blue-600 transition-colors"
             >
               Devices
             </button>
             <button 
-              onClick={() => scrollToSection('about')}
+              onClick={() => handleNavigate('about')}
               className="text-gray-600 hover:text-blue-600 transition-colors"
             >
               About
             </button>
             <button 
-              onClick={() => scrollToSection('contact')}
+              onClick={() => handleNavigate('contact')}
               className="text-gray-600 hover:text-blue-600 transition-colors"
             >
               Contact
@@ -90,25 +98,25 @@ export function Header() {
           <div className="md:hidden mt-4 pb-4 border-t border-gray-200">
             <nav className="flex flex-col space-y-4 mt-4">
               <button 
-                onClick={() => scrollToSection('how-it-works')}
+                onClick={() => handleNavigate('how-it-works')}
                 className="text-gray-600 hover:text-blue-600 transition-colors text-left py-2"
               >
                 How it Works
               </button>
               <button 
-                onClick={() => scrollToSection('devices')}
+                onClick={() => handleNavigate('devices')}
                 className="text-gray-600 hover:text-blue-600 transition-colors text-left py-2"
               >
                 Devices
               </button>
               <button 
-                onClick={() => scrollToSection('about')}
+                onClick={() => handleNavigate('about')}
                 className="text-gray-600 hover:text-blue-600 transition-colors text-left py-2"
               >
                 About
               </button>
               <button 
-                onClick={() => scrollToSection('contact')}
+                onClick={() => handleNavigate('contact')}
                 className="text-gray-600 hover:text-blue-600 transition-colors text-left py-2"
               >
                 Contact

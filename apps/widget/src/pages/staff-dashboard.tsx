@@ -62,7 +62,16 @@ interface Order {
     };
   };
   deviceCondition: {
+    id: number;
     name: string;
+  };
+  storageOption?: {
+    id: number;
+    storage: string;
+    excellentPrice: number;
+    goodPrice: number;
+    fairPrice: number;
+    poorPrice: number;
   };
   shippingLabels: any[];
   payments: any[];
@@ -126,6 +135,9 @@ export default function StaffDashboard() {
   const [notes, setNotes] = useState('');
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('');
+  const [proposedFinalAmount, setProposedFinalAmount] = useState('');
+  const [sendForApproval, setSendForApproval] = useState(false);
+  const [revisedConditionId, setRevisedConditionId] = useState<number | ''>('');
   
   // Client management state
   const [clients, setClients] = useState<any[]>([]);
@@ -854,6 +866,19 @@ export default function StaffDashboard() {
     setTrackingNumber(order.shippingLabels?.[0]?.trackingNumber || '');
     setNotes(order.notes || '');
     setPaymentMethod(order.paymentMethod || '');
+    setRevisedConditionId(order.deviceCondition?.id || '');
+    // Prefill proposed amount based on current condition and storageOption
+    const conditionName = order.deviceCondition?.name?.toLowerCase?.() || '';
+    const so = order.storageOption;
+    let derived = '';
+    if (so) {
+      if (conditionName === 'excellent') derived = String(so.excellentPrice);
+      else if (conditionName === 'good') derived = String(so.goodPrice);
+      else if (conditionName === 'fair') derived = String(so.fairPrice);
+      else if (conditionName === 'poor') derived = String(so.poorPrice);
+    }
+    setProposedFinalAmount(derived || (order.finalAmount ? String(order.finalAmount) : ''));
+    setSendForApproval(false);
     setShowOrderDetails(true);
   };
 
@@ -872,6 +897,9 @@ export default function StaffDashboard() {
           trackingNumber,
           notes,
           paymentMethod,
+          finalAmount: proposedFinalAmount ? parseFloat(proposedFinalAmount) : undefined,
+          sendForApproval,
+          deviceConditionId: revisedConditionId || undefined,
         }),
       });
 
@@ -881,6 +909,7 @@ export default function StaffDashboard() {
           order.id === selectedOrder.id ? updatedOrder : order
         ));
         setSelectedOrder(updatedOrder);
+        setSendForApproval(false);
         showNotificationModal('success', 'Success', 'Order updated successfully!');
       } else {
         console.error('Failed to update order');
@@ -1617,6 +1646,60 @@ export default function StaffDashboard() {
                           <option value="paypal">PayPal</option>
                           <option value="cheque">Cheque</option>
                         </select>
+                      </div>
+
+                      {/* Revised Condition (affects price) */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Revised Condition</label>
+                        <select
+                          value={revisedConditionId}
+                          onChange={(e) => {
+                            const id = e.target.value ? parseInt(e.target.value) : '' as any;
+                            setRevisedConditionId(id);
+                            if (selectedOrder?.storageOption) {
+                              const so = selectedOrder.storageOption;
+                              const cond = deviceConditions.find((c: any) => c.id === id);
+                              const name = cond?.name?.toLowerCase?.();
+                              if (name === 'excellent') setProposedFinalAmount(String(so.excellentPrice));
+                              else if (name === 'good') setProposedFinalAmount(String(so.goodPrice));
+                              else if (name === 'fair') setProposedFinalAmount(String(so.fairPrice));
+                              else if (name === 'poor') setProposedFinalAmount(String(so.poorPrice));
+                            }
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">Select condition</option>
+                          {deviceConditions.map((c: any) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">Pick the inspected condition. Price suggestion will auto-fill if storage is known.</p>
+                      </div>
+
+                      {/* Proposed Final Amount */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Proposed Final Amount</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={proposedFinalAmount}
+                          onChange={(e) => setProposedFinalAmount(e.target.value)}
+                          placeholder="Enter revised amount"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Set a revised offer when inspection changes the device condition.</p>
+                      </div>
+
+                      {/* Send For Customer Approval */}
+                      <div className="flex items-center gap-2">
+                        <input
+                          id="send-for-approval"
+                          type="checkbox"
+                          checked={sendForApproval}
+                          onChange={(e) => setSendForApproval(e.target.checked)}
+                          className="rounded"
+                        />
+                        <label htmlFor="send-for-approval" className="text-sm">Send revised amount to customer for approval (sets status to Awaiting Approval)</label>
                       </div>
 
                       {/* Notes */}

@@ -5,7 +5,7 @@ import { Search, Mail, Hash, Clock, CheckCircle, AlertCircle, XCircle, Package, 
 interface OrderStatus {
   id: number;
   orderNumber: string;
-  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED';
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED' | 'AWAITING_APPROVAL' | 'REJECTED';
   quotedAmount: number;
   finalAmount?: number;
   submittedAt: string;
@@ -23,6 +23,7 @@ export default function TrackOrder() {
   const [isLoading, setIsLoading] = useState(false);
   const [order, setOrder] = useState<OrderStatus | null>(null);
   const [error, setError] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +67,10 @@ export default function TrackOrder() {
         return <CheckCircle className="w-5 h-5 text-green-500" />;
       case 'CANCELLED':
         return <XCircle className="w-5 h-5 text-red-500" />;
+      case 'AWAITING_APPROVAL':
+        return <AlertCircle className="w-5 h-5 text-amber-500" />;
+      case 'REJECTED':
+        return <XCircle className="w-5 h-5 text-red-500" />;
       default:
         return <AlertCircle className="w-5 h-5 text-gray-500" />;
     }
@@ -80,6 +85,10 @@ export default function TrackOrder() {
       case 'COMPLETED':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'CANCELLED':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'AWAITING_APPROVAL':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'REJECTED':
         return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -228,7 +237,7 @@ export default function TrackOrder() {
                         <span className="text-gray-600">Quoted Amount:</span>
                         <span className="font-medium text-green-600">${order.quotedAmount.toFixed(2)}</span>
                       </div>
-                      {order.finalAmount && (
+                      {order.finalAmount !== undefined && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Final Amount:</span>
                           <span className="font-medium text-green-600">${order.finalAmount.toFixed(2)}</span>
@@ -280,6 +289,74 @@ export default function TrackOrder() {
                   <p className="text-sm text-gray-600">{order.notes}</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Approval Actions for Customers */}
+          {order && order.status === 'AWAITING_APPROVAL' && (
+            <div className="bg-white rounded-2xl shadow-xl p-8 mt-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Revised Offer</h3>
+              <p className="text-sm text-gray-600 mb-4">We reviewed your device and updated the offer. Please approve or decline.</p>
+              <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4 mb-4">
+                <span className="text-gray-700">Proposed Final Amount</span>
+                <span className="font-semibold text-green-700">${(order.finalAmount ?? order.quotedAmount).toFixed(2)}</span>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  disabled={actionLoading}
+                  onClick={async () => {
+                    setActionLoading(true);
+                    setError('');
+                    try {
+                      const res = await fetch('/api/trade-in/respond', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, orderNumber, decision: 'approve' })
+                      });
+                      if (!res.ok) {
+                        const data = await res.json().catch(() => ({}));
+                        throw new Error(data.error || 'Failed to approve');
+                      }
+                      const data = await res.json();
+                      setOrder(data);
+                    } catch (e: any) {
+                      setError(e.message || 'Failed to approve');
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                  className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                >
+                  {actionLoading ? 'Processing...' : 'Approve Offer'}
+                </button>
+                <button
+                  disabled={actionLoading}
+                  onClick={async () => {
+                    setActionLoading(true);
+                    setError('');
+                    try {
+                      const res = await fetch('/api/trade-in/respond', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, orderNumber, decision: 'decline' })
+                      });
+                      if (!res.ok) {
+                        const data = await res.json().catch(() => ({}));
+                        throw new Error(data.error || 'Failed to decline');
+                      }
+                      const data = await res.json();
+                      setOrder(data);
+                    } catch (e: any) {
+                      setError(e.message || 'Failed to decline');
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                  className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
+                  {actionLoading ? 'Processing...' : 'Decline Offer'}
+                </button>
+              </div>
             </div>
           )}
         </div>
