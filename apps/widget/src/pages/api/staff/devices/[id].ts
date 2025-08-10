@@ -35,8 +35,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         case 'model':
           const deviceData = data;
           
-          console.log('Updating device:', deviceId, 'with data:', deviceData);
-          console.log('Storage options:', storageOptions);
+              // Production logging removed for security
           
           try {
             const { data: model, error: modelError } = await supabaseAdmin
@@ -59,11 +58,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               .single();
 
             if (modelError) throw modelError;
-            console.log('Device updated:', model.id);
+            // Production logging removed for security
 
             // Handle storage options update
             if (storageOptions && storageOptions.length > 0) {
-              console.log('Updating storage options:', storageOptions);
+              // Production logging removed for security
               
               // Delete existing storage options for this model
               const { error: deleteError } = await supabaseAdmin
@@ -72,13 +71,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                 .eq('deviceModelId', deviceId);
 
               if (deleteError) throw deleteError;
-              console.log('Deleted existing storage options');
+                              // Production logging removed for security
 
               // Create new storage options
               for (const option of storageOptions) {
-                console.log('Processing option:', option);
+                                  // Production logging removed for security
                 if (option.storage) {
-                  console.log('Creating storage option:', option.storage);
+                                      // Production logging removed for security
                   
                   try {
                     const { data: storageOption, error: storageError } = await supabaseAdmin
@@ -95,16 +94,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                       .single();
 
                     if (storageError) throw storageError;
-                    console.log('Storage option created:', storageOption);
+                    // Production logging removed for security
                   } catch (storageError) {
                     console.error('Storage option creation failed:', storageError);
                   }
                 } else {
-                  console.log('Skipping option - missing storage');
+                  // Production logging removed for security
                 }
               }
             } else {
-              console.log('No storage options provided for update');
+              // Production logging removed for security
             }
 
             return res.status(200).json(model);
@@ -122,7 +121,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
   } else if (req.method === 'DELETE') {
     try {
-      console.log('Deleting device:', deviceId);
+                  // Production logging removed for security
 
       // Delete storage options first
       const { error: deleteStorageError } = await supabaseAdmin

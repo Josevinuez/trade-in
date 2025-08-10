@@ -7,9 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    console.log('Starting device catalog fetch...');
-    console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
-    console.log('Service key exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+      // Production logging removed for security
 
     const [categoriesResult, brandsResult, conditionsResult, modelsResult] = await Promise.all([
       supabaseAdmin
@@ -39,10 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .order('name', { ascending: true })
     ]);
 
-    console.log('Categories result:', categoriesResult);
-    console.log('Brands result:', brandsResult);
-    console.log('Conditions result:', conditionsResult);
-    console.log('Models result:', modelsResult);
+          // Production logging removed for security
 
     if (categoriesResult.error) {
       console.error('Categories error:', categoriesResult.error);
@@ -68,12 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       models: modelsResult.data || []
     };
 
-    console.log('Device catalog fetch successful:', {
-      categoriesCount: result.categories.length,
-      brandsCount: result.brands.length,
-      conditionsCount: result.conditions.length,
-      modelsCount: result.models.length
-    });
+    // Production logging removed for security
 
     res.status(200).json(result);
 

@@ -84,7 +84,7 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
   useEffect(() => {
     const fetchDeviceData = async () => {
       try {
-        console.log('🔍 Fetching device data...');
+        // Production logging removed for security
         const [catalogResponse, conditionsResponse] = await Promise.all([
           fetch('/api/devices/catalog'),
           fetch('/api/devices/conditions')
@@ -92,19 +92,14 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
         
         if (catalogResponse.ok) {
           const catalogData = await catalogResponse.json();
-          console.log('📱 Catalog data:', catalogData);
-          console.log('📱 Models with storage options:', catalogData.models?.map((m: any) => ({
-            name: m.name,
-            storageOptionsCount: m.storageOptions?.length || 0,
-            storageOptions: m.storageOptions?.map((s: any) => s.storage) || []
-          })));
+          // Production logging removed for security
           setDeviceCategories(catalogData.categories || []);
           setDeviceModels(catalogData.models || []);
         }
         
         if (conditionsResponse.ok) {
           const conditionsData = await conditionsResponse.json();
-          console.log('📱 Conditions data:', conditionsData);
+          // Production logging removed for security
           setDeviceConditions(conditionsData.conditions || []);
         }
       } catch (error) {
