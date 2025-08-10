@@ -292,8 +292,6 @@ export default function StaffDashboard() {
     }
   };
 
-
-
   // Device management functions
   const fetchDeviceManagementData = async () => {
     try {
