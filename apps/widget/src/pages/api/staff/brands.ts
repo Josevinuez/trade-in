@@ -1,7 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
+import { withAuth, withRateLimit } from '../../../lib/security';
+import { z } from 'zod';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+const brandSchema = z.object({
+  name: z.string().min(1).max(100),
+  logoUrl: z.string().url().optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
       const { type } = req.query;
@@ -34,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       switch (type) {
         case 'brand':
-          const { name, logoUrl } = data;
+          const { name, logoUrl } = brandSchema.parse(data);
           
           const { data: newBrand, error } = await supabaseAdmin
             .from('DeviceBrand')
@@ -59,4 +67,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
-} 
+}
+
+export default withAuth(['staff'])(withRateLimit({ windowMs: 60_000, limit: 60, keyPrefix: 'staff:' })(handler));

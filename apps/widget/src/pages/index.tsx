@@ -122,45 +122,88 @@ export default function Home() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
+      <section className="py-20 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
+        {/* Background decorative elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-10 right-20 w-32 h-32 bg-gradient-to-br from-blue-300/30 to-indigo-400/30 rounded-full blur-2xl animate-pulse"></div>
+          <div className="absolute bottom-10 left-20 w-40 h-40 bg-gradient-to-br from-indigo-300/30 to-purple-400/30 rounded-full blur-2xl animate-pulse" style={{animationDelay: '1.5s'}}></div>
+        </div>
+        
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full text-sm font-medium mb-6">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Our Impact
+            </div>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Trusted by Thousands</h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              See why customers choose TradeIn Pro for their device trade-ins
+            </p>
+          </div>
+          
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Users className="w-8 h-8 text-white" />
+            <div className="group text-center">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
+                <div className="relative w-20 h-20 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:shadow-2xl transition-all duration-500 transform group-hover:scale-110">
+                  <Users className="w-10 h-10 text-white" />
+                </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">50K+</h3>
-              <p className="text-gray-600">Happy Customers</p>
+              <h3 className="text-3xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">50K+</h3>
+              <p className="text-gray-600 font-medium">Happy Customers</p>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <DollarSign className="w-8 h-8 text-white" />
+            
+            <div className="group text-center">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-3xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
+                <div className="relative w-20 h-20 bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:shadow-2xl transition-all duration-500 transform group-hover:scale-110">
+                  <DollarSign className="w-10 h-10 text-white" />
+                </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">$2M+</h3>
-              <p className="text-gray-600">Paid Out</p>
+              <h3 className="text-3xl font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors">$2M+</h3>
+              <p className="text-gray-600 font-medium">Paid Out</p>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Star className="w-8 h-8 text-white" />
+            
+            <div className="group text-center">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500 to-amber-600 rounded-3xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
+                <div className="relative w-20 h-20 bg-gradient-to-br from-amber-500 via-amber-600 to-orange-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:shadow-2xl transition-all duration-500 transform group-hover:scale-110">
+                  <Star className="w-10 h-10 text-white" />
+                </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">4.9★</h3>
-              <p className="text-gray-600">Average Rating</p>
+              <h3 className="text-3xl font-bold text-gray-900 mb-2 group-hover:text-amber-600 transition-colors">4.9★</h3>
+              <p className="text-gray-600 font-medium">Average Rating</p>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-8 h-8 text-white" />
+            
+            <div className="group text-center">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-violet-500 to-violet-600 rounded-3xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
+                <div className="relative w-20 h-20 bg-gradient-to-br from-violet-500 via-violet-600 to-purple-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:shadow-2xl transition-all duration-500 transform group-hover:scale-110">
+                  <Clock className="w-10 h-10 text-white" />
+                </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">24h</h3>
-              <p className="text-gray-600">Average Payment</p>
+              <h3 className="text-3xl font-bold text-gray-900 mb-2 group-hover:text-violet-600 transition-colors">24h</h3>
+              <p className="text-gray-600 font-medium">Average Payment</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4">
+      <section className="py-20 bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 relative overflow-hidden">
+        {/* Background decorative elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-yellow-300/40 to-orange-400/40 rounded-full blur-2xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-10 w-40 h-40 bg-gradient-to-br from-red-300/40 to-pink-400/40 rounded-full blur-2xl animate-pulse" style={{animationDelay: '1s'}}></div>
+          <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-gradient-to-br from-amber-300/30 to-yellow-400/30 rounded-full blur-xl animate-pulse" style={{animationDelay: '2s'}}></div>
+        </div>
+        
+        <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-16">
+            <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full text-sm font-medium mb-6">
+              <Sparkles className="w-4 h-4 mr-2" />
+              Premium Features
+            </div>
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose TradeIn Pro?</h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               We make selling your used electronics simple, secure, and profitable
@@ -168,45 +211,96 @@ export default function Home() {
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6">
-                <Zap className="w-8 h-8 text-white" />
+            {/* Instant Quotes Card */}
+            <div className="group relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-3xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
+              <div className="relative bg-gradient-to-br from-blue-50 to-indigo-100 rounded-3xl p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-2 border border-blue-200/50">
+                <div className="absolute -top-4 -right-4 w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+                  <Zap className="w-4 h-4 text-white" />
+                </div>
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                  <Zap className="w-10 h-10 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Instant Quotes</h3>
+                <p className="text-gray-700 leading-relaxed">
+                  Get an immediate quote for your device in seconds. No waiting, no hassle.
+                </p>
+                <div className="mt-6 flex items-center text-blue-600 font-semibold group-hover:text-blue-700 transition-colors">
+                  <span>Learn more</span>
+                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Instant Quotes</h3>
-              <p className="text-gray-600 leading-relaxed">
-                Get an immediate quote for your device in seconds. No waiting, no hassle.
-              </p>
             </div>
             
-            <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6">
-                <Shield className="w-8 h-8 text-white" />
+            {/* Secure Process Card */}
+            <div className="group relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-3xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
+              <div className="relative bg-gradient-to-br from-emerald-50 to-green-100 rounded-3xl p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-2 border border-emerald-200/50">
+                <div className="absolute -top-4 -right-4 w-8 h-8 bg-gradient-to-r from-emerald-500 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+                  <Shield className="w-4 h-4 text-white" />
+                </div>
+                <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                  <Shield className="w-10 h-10 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Secure Process</h3>
+                <p className="text-gray-700 leading-relaxed">
+                  Your data is protected with bank-level security. Safe and confidential.
+                </p>
+                <div className="mt-6 flex items-center text-emerald-600 font-semibold group-hover:text-emerald-700 transition-colors">
+                  <span>Learn more</span>
+                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Secure Process</h3>
-              <p className="text-gray-600 leading-relaxed">
-                Your data is protected with bank-level security. Safe and confidential.
-              </p>
             </div>
             
-            <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6">
-                <Truck className="w-8 h-8 text-white" />
+            {/* Free Shipping Card */}
+            <div className="group relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-600 rounded-3xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
+              <div className="relative bg-gradient-to-br from-violet-50 to-purple-100 rounded-3xl p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-2 border border-violet-200/50">
+                <div className="absolute -top-4 -right-4 w-8 h-8 bg-gradient-to-r from-violet-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                  <Truck className="w-4 h-4 text-white" />
+                </div>
+                <div className="w-20 h-20 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                  <Truck className="w-10 h-10 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Free Shipping</h3>
+                <p className="text-gray-700 leading-relaxed">
+                  We cover all shipping costs. Just pack and send - we handle the rest.
+                </p>
+                <div className="mt-6 flex items-center text-violet-600 font-semibold group-hover:text-violet-700 transition-colors">
+                  <span>Learn more</span>
+                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Free Shipping</h3>
-              <p className="text-gray-600 leading-relaxed">
-                We cover all shipping costs. Just pack and send - we handle the rest.
-              </p>
+            </div>
+          </div>
+          
+          {/* Additional feature highlight */}
+          <div className="mt-16 text-center">
+            <div className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-orange-400 to-red-500 text-white rounded-2xl shadow-lg">
+              <Award className="w-6 h-6 mr-3" />
+              <span className="text-lg font-semibold">Trusted by 50,000+ customers across Canada</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
+      <section className="py-20 bg-gradient-to-br from-pink-50 via-rose-50 to-red-50 relative overflow-hidden">
+        {/* Background decorative elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-20 right-10 w-36 h-36 bg-gradient-to-br from-pink-300/30 to-rose-400/30 rounded-full blur-2xl animate-pulse"></div>
+          <div className="absolute bottom-20 left-10 w-28 h-28 bg-gradient-to-br from-rose-300/30 to-red-400/30 rounded-full blur-2xl animate-pulse" style={{animationDelay: '0.5s'}}></div>
+        </div>
+        
+        <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-16">
+            <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-full text-sm font-medium mb-6">
+              <Heart className="w-4 h-4 mr-2" />
+              Customer Love
+            </div>
             <h2 className="text-4xl font-bold text-gray-900 mb-4">What Our Customers Say</h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Don't just take our word for it - hear from our satisfied customers
             </p>
           </div>

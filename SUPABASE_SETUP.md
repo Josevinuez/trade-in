@@ -28,12 +28,13 @@ CREATE POLICY "Service role can upload" ON storage.objects FOR INSERT WITH CHECK
 
 ## 3. Environment Variables
 
-The environment variables have been set up in `.env.local` with your Supabase credentials:
+Create `apps/widget/.env.local` with your Supabase credentials and app secrets:
 
 - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
-- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key
-- `DATABASE_URL`: Your Supabase database URL
+- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key (server-only)
+- `JWT_SECRET`: Secret used to sign staff JWTs
+- `NEXT_PUBLIC_SITE_ORIGIN`: Allowed site origin for security headers
 
 ## 4. Sample Data
 

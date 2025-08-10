@@ -1,7 +1,19 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
+import { withAuth, withRateLimit } from '../../../lib/security';
+import { z } from 'zod';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+const modelCreateSchema = z.object({
+  name: z.string().min(1),
+  modelNumber: z.string().nullable().optional(),
+  releaseYear: z.union([z.string(), z.number()]).optional(),
+  imageUrl: z.string().url().nullable().optional(),
+  categoryId: z.union([z.string(), z.number()]),
+  brandId: z.union([z.string(), z.number()]),
+  displayOrder: z.union([z.string(), z.number()]).optional(),
+});
+
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
       const { type } = req.query;
@@ -140,23 +152,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           
           try {
             // Validate required fields
-            if (!deviceData.name || !deviceData.categoryId || !deviceData.brandId) {
-              return res.status(400).json({ 
-                error: 'Missing required fields', 
-                details: 'Name, category, and brand are required' 
-              });
-            }
+            const validated = modelCreateSchema.parse(deviceData);
 
             const { data: model, error: modelError } = await supabaseAdmin
               .from('DeviceModel')
               .insert({
-                name: deviceData.name,
-                modelNumber: deviceData.modelNumber || null,
-                releaseYear: deviceData.releaseYear ? parseInt(deviceData.releaseYear) : null,
-                imageUrl: deviceData.imageUrl || null,
-                categoryId: parseInt(deviceData.categoryId),
-                brandId: parseInt(deviceData.brandId),
-                displayOrder: deviceData.displayOrder ? parseInt(deviceData.displayOrder) : 0,
+                name: validated.name,
+                modelNumber: validated.modelNumber || null,
+                releaseYear: validated.releaseYear ? parseInt(String(validated.releaseYear)) : null,
+                imageUrl: validated.imageUrl || null,
+                categoryId: parseInt(String(validated.categoryId)),
+                brandId: parseInt(String(validated.brandId)),
+                displayOrder: validated.displayOrder ? parseInt(String(validated.displayOrder)) : 0,
                 isActive: true,
               })
               .select(`

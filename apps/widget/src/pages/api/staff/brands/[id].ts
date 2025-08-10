@@ -1,13 +1,24 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../../utils/supabase';
+import { withAuth, withRateLimit } from '../../../../lib/security';
+import { z } from 'zod';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+const updateSchema = z.object({
+  type: z.literal('brand'),
+  data: z.object({
+    name: z.string().min(1).max(100),
+    logoUrl: z.string().url().optional().nullable(),
+    isActive: z.boolean().optional(),
+  })
+});
+
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
   const brandId = parseInt(id as string);
 
   if (req.method === 'PUT') {
     try {
-      const { type, data } = req.body;
+      const { type, data } = updateSchema.parse(req.body);
 
       switch (type) {
         case 'brand':
@@ -66,4 +77,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
-} 
+}
+
+export default withAuth(['staff'])(withRateLimit({ windowMs: 60_000, limit: 60, keyPrefix: 'staff:' })(handler));

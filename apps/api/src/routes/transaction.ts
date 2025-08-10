@@ -4,6 +4,7 @@ import { Transaction } from '../entities/Transaction';
 import { Quote } from '../entities/Quote';
 import { z } from 'zod';
 import { sendTradeInEmail } from '../utils/email';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -82,7 +83,7 @@ router.post('/', async (req, res) => {
 });
 
 // Get transaction by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth(['admin', 'staff']), async (req, res) => {
   try {
     const transactionRepository = AppDataSource.getRepository(Transaction);
     const transaction = await transactionRepository.findOneBy({ id: req.params.id });
@@ -107,7 +108,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Update transaction
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', requireAuth(['admin', 'staff']), async (req, res) => {
   try {
     const transactionRepository = AppDataSource.getRepository(Transaction);
     const transaction = await transactionRepository.findOneBy({ id: req.params.id });
@@ -148,7 +149,7 @@ router.patch('/:id', async (req, res) => {
 });
 
 // Get all transactions
-router.get('/', async (req, res) => {
+router.get('/', requireAuth(['admin', 'staff']), async (req, res) => {
   try {
     const transactionRepository = AppDataSource.getRepository(Transaction);
     const { status, startDate, endDate } = req.query;

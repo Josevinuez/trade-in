@@ -18,11 +18,11 @@ A modern, full-stack web application for managing device trade-ins and buybacks.
 - Support for smartphones, tablets, laptops, and smartwatches
 - Device condition assessment and storage options
 
-### Admin Dashboard (Coming Soon)
-- Device and pricing management
-- Sales analytics and reporting
-- Transaction history
-- User authentication
+### Staff Dashboard
+- Brand and device model management
+- Trade-in order management and tracking
+- Image uploads to Supabase Storage
+- Staff authentication (JWT, HttpOnly cookies)
 
 ## 🛠 Tech Stack
 
@@ -36,22 +36,19 @@ A modern, full-stack web application for managing device trade-ins and buybacks.
 ## 📁 Project Structure
 
 ```
-trade-in/
+trade in/
 ├── apps/
-│   ├── widget/          # Customer-facing landing page & widget
-│   │   ├── src/
-│   │   │   ├── components/    # React components
-│   │   │   ├── pages/         # Next.js pages
-│   │   │   ├── store/         # Zustand state management
-│   │   │   └── styles/        # Global styles
-│   │   └── public/            # Static assets
-│   ├── dashboard/       # Admin dashboard (coming soon)
-│   └── api/            # Backend API (coming soon)
+│   └── widget/               # Landing + widget + serverless API routes
+│       ├── src/
+│       │   ├── components/   # React components
+│       │   ├── pages/        # Next.js pages & API routes
+│       │   ├── lib/          # Auth, security middleware
+│       │   ├── store/        # Zustand state
+│       │   └── styles/       # Global styles
+│       └── prisma/           # (unused with Supabase)
 ├── packages/
-│   ├── ui/             # Shared UI components
-│   ├── config/         # Shared configuration
-│   └── types/          # Shared TypeScript types
-└── package.json
+│   └── types/                # Shared TypeScript types
+└── README.md
 ```
 
 ## 🚀 Quick Start
@@ -75,7 +72,17 @@ trade-in/
    pnpm install
    ```
 
-3. **Start the development server**:
+3. **Environment variables (widget)**:
+   Create `apps/widget/.env.local` (or copy from `.env.example`):
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   JWT_SECRET=change_me_to_a_long_random_string
+   NEXT_PUBLIC_SITE_ORIGIN=http://localhost:3000
+   ```
+
+4. **Start the development server**:
    ```bash
    cd apps/widget
    pnpm dev
@@ -100,12 +107,11 @@ pnpm dev
 ### Production Build
 
 ```bash
-# Build the application
-cd apps/widget
+# Build from repository root
 pnpm build
 
-# Start production server
-pnpm start
+# Start production server (from apps/widget)
+cd apps/widget && pnpm start
 ```
 
 ### Available Scripts
@@ -151,6 +157,19 @@ pnpm type-check   # Run TypeScript type checking
 - Company information
 - Key statistics
 - Service highlights
+
+## 🔐 Security
+
+This project includes a security hardening pass for public deployment:
+
+- **Authentication**: Staff login issues short-lived JWTs; token is also set as HttpOnly, SameSite=Strict cookie (`auth_token`).
+- **Authorization**: All `pages/api/staff/**` routes require a valid JWT and enforce roles.
+- **Rate limiting**: In-memory IP-based limiter on sensitive endpoints (swap to Redis/Upstash in production).
+- **Input validation**: All critical endpoints validate payloads with zod.
+- **CORS & Headers**: Wildcard CORS removed; `NEXT_PUBLIC_SITE_ORIGIN` allowlisted. CSP, X-Frame-Options, Referrer-Policy, Permissions-Policy, and HSTS (prod) are set in `next.config.js`.
+- **Supabase service role**: Always used server-side only; protected by auth on staff endpoints.
+
+See `SECURITY.md` for details and production notes.
 
 ## 🔧 Customization
 
@@ -249,6 +268,14 @@ The application is optimized for:
 - SEO-friendly structure
 - Accessibility compliance
 - Mobile performance
+
+## 📄 Environment variables
+
+- `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL (public)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase anon key (public)
+- `SUPABASE_SERVICE_ROLE_KEY`: Supabase service role key (server-only)
+- `JWT_SECRET`: Secret for signing staff JWTs
+- `NEXT_PUBLIC_SITE_ORIGIN`: Allowed site origin for CORS/security headers
 
 ## 🤝 Contributing
 

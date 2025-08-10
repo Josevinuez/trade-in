@@ -1,13 +1,20 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
+import { withRateLimit } from '../../../lib/security';
+import { z } from 'zod';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+const trackSchema = z.object({
+  email: z.string().email(),
+  orderNumber: z.string().min(3),
+});
+
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { email, orderNumber } = req.body;
+    const { email, orderNumber } = trackSchema.parse(req.body);
 
     if (!email || !orderNumber) {
       return res.status(400).json({ error: 'Email and order number are required' });
@@ -55,4 +62,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error('Order tracking error:', error);
     return res.status(500).json({ error: 'Failed to track order', details: error instanceof Error ? error.message : 'Unknown error' });
   }
-} 
+}
+
+export default withRateLimit({ windowMs: 60_000, limit: 60, keyPrefix: 'track:' })(handler);

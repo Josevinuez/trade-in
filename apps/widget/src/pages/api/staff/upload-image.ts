@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
+import { withAuth, withRateLimit } from '../../../lib/security';
 
 export const config = {
   api: {
@@ -9,7 +10,7 @@ export const config = {
   },
 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -103,4 +104,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-} 
+}
+
+export default withAuth(['staff'])(withRateLimit({ windowMs: 60_000, limit: 20, keyPrefix: 'upload:' })(handler));

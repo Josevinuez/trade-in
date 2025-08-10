@@ -1,13 +1,25 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../../utils/supabase';
+import { withAuth, withRateLimit } from '../../../../lib/security';
+import { z } from 'zod';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+const updateSchema = z.object({
+  status: z.string().min(1).optional(),
+  finalAmount: z.union([z.number(), z.string()]).optional(),
+  notes: z.string().optional(),
+  trackingNumber: z.string().optional(),
+  paymentMethod: z.string().optional(),
+  sendForApproval: z.boolean().optional(),
+  deviceConditionId: z.union([z.string(), z.number()]).optional(),
+});
+
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
   const orderId = parseInt(id as string);
 
   if (req.method === 'PUT') {
     try {
-      const { status, finalAmount, notes, trackingNumber, paymentMethod, sendForApproval, deviceConditionId } = req.body as any;
+      const { status, finalAmount, notes, trackingNumber, paymentMethod, sendForApproval, deviceConditionId } = updateSchema.parse(req.body);
 
       const updateData: any = {
         status,
@@ -19,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       if (deviceConditionId !== undefined) {
-        updateData.deviceConditionId = parseInt(deviceConditionId);
+        updateData.deviceConditionId = parseInt(String(deviceConditionId));
       }
 
       if (notes !== undefined) {
@@ -100,4 +112,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Allow', ['PUT', 'DELETE']);
     res.status(405).end(`Method ${req.method} Not Allowed`);
   }
-} 
+}
+
+export default withAuth(['staff'])(withRateLimit({ windowMs: 60_000, limit: 60, keyPrefix: 'staff:' })(handler));

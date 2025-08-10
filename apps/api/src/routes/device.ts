@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { AppDataSource } from '../index';
 import { Device } from '../entities/Device';
 import { z } from 'zod';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -73,7 +74,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create new device
-router.post('/', async (req, res) => {
+router.post('/', requireAuth(['admin']), async (req, res) => {
   try {
     const deviceRepository = AppDataSource.getRepository(Device);
     const validatedData = createDeviceSchema.parse(req.body);
@@ -101,7 +102,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update device
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', requireAuth(['admin']), async (req, res) => {
   try {
     const deviceRepository = AppDataSource.getRepository(Device);
     const device = await deviceRepository.findOneBy({ id: req.params.id });
@@ -142,7 +143,7 @@ router.patch('/:id', async (req, res) => {
 });
 
 // Delete device
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth(['admin']), async (req, res) => {
   try {
     const deviceRepository = AppDataSource.getRepository(Device);
     const device = await deviceRepository.findOneBy({ id: req.params.id });

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { AppDataSource } from '../index';
 import { Device } from '../entities/Device';
 import { z } from 'zod';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -13,7 +14,7 @@ const updatePricingSchema = z.object({
 });
 
 // Update device pricing
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', requireAuth(['admin']), async (req, res) => {
   try {
     const deviceRepository = AppDataSource.getRepository(Device);
     const device = await deviceRepository.findOneBy({ id: req.params.id });

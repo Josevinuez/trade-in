@@ -4,8 +4,17 @@ import { Quote } from '../entities/Quote';
 import { Device } from '../entities/Device';
 import { z } from 'zod';
 import { DeviceCondition, StorageOption } from '@device-buyback/types';
+import rateLimit from 'express-rate-limit';
 
 const router = Router();
+
+// Rate limit public quote endpoints
+const quoteLimiter = rateLimit({
+  windowMs: Number(process.env.QUOTE_RATE_LIMIT_WINDOW_MS || 60_000),
+  limit: Number(process.env.QUOTE_RATE_LIMIT_MAX || 60),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Validation schemas
 const createQuoteSchema = z.object({
@@ -20,7 +29,7 @@ const createQuoteSchema = z.object({
 });
 
 // Calculate quote
-router.post('/calculate', async (req, res) => {
+router.post('/calculate', quoteLimiter, async (req, res) => {
   try {
     const quoteRepository = AppDataSource.getRepository(Quote);
     const deviceRepository = AppDataSource.getRepository(Device);
@@ -65,7 +74,7 @@ router.post('/calculate', async (req, res) => {
 });
 
 // Create quote
-router.post('/', async (req, res) => {
+router.post('/', quoteLimiter, async (req, res) => {
   try {
     const quoteRepository = AppDataSource.getRepository(Quote);
     const deviceRepository = AppDataSource.getRepository(Device);

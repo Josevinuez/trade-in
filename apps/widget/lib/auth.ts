@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '../src/utils/supabase';
+import jwt from 'jsonwebtoken';
 
 export interface AuthResult {
   success: boolean;
@@ -37,26 +38,20 @@ export class AuthService {
     }
   }
 
-  // Create auth token (simplified - using JWT tokens instead)
+  // Create JWT auth token
   static async createAuthToken(userId: number, userType: 'STAFF'): Promise<string> {
-    // For now, we'll use a simple token generation
-    // In a real implementation, you'd use Supabase's JWT functionality
-    const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
-    return token;
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error('JWT secret not configured');
+    return jwt.sign({ id: userId, role: 'staff' }, secret, { expiresIn: '1h' });
   }
 
-  // Validate auth token (simplified)
+  // Validate JWT auth token
   static async validateAuthToken(token: string): Promise<AuthResult> {
     try {
-      // For now, we'll use a simple validation
-      // In a real implementation, you'd validate JWT tokens with Supabase
-      if (!token) {
-        return { success: false, error: 'Invalid token' };
-      }
-
-      // For demo purposes, we'll assume the token is valid
-      // In production, you'd decode and validate the JWT
-      return { success: true, user: { id: 1, email: 'admin@example.com', role: 'staff' } };
+      const secret = process.env.JWT_SECRET;
+      if (!secret || !token) return { success: false, error: 'Invalid token' };
+      const decoded = jwt.verify(token, secret) as any;
+      return { success: true, user: decoded };
     } catch (error) {
       console.error('Token validation error:', error);
       return { success: false, error: 'Token validation failed' };

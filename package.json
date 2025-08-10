@@ -2,6 +2,7 @@
   "name": "device-buyback-suite",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@10.11.0",
   "workspaces": [
     "apps/*",
     "packages/*"

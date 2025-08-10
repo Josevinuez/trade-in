@@ -1,17 +1,21 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
+import { withRateLimit } from '../../../lib/security';
+import { z } from 'zod';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+const respondSchema = z.object({
+  email: z.string().email(),
+  orderNumber: z.string().min(3),
+  decision: z.enum(['approve', 'decline']),
+});
+
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { email, orderNumber, decision } = req.body as {
-      email?: string;
-      orderNumber?: string;
-      decision?: 'approve' | 'decline';
-    };
+    const { email, orderNumber, decision } = respondSchema.parse(req.body);
 
     if (!email || !orderNumber || !decision) {
       return res.status(400).json({ error: 'Email, order number and decision are required' });
@@ -109,5 +113,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Failed to respond to order', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 }
+
+export default withRateLimit({ windowMs: 60_000, limit: 30, keyPrefix: 'respond:' })(handler);
 
 

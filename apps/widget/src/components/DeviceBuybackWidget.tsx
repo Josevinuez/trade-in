@@ -753,30 +753,33 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
   // If not showing form, show the landing page
   if (!showForm) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="max-w-5xl mx-auto px-4 py-16">
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            Get an instant quote for your device
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+            <span className="text-gray-900">Get an instant quote for your </span>
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">device</span>
           </h1>
-          <p className="text-xl text-gray-600">
-            Sell your used electronics quickly and securely
+          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
+            Sell your used electronics quickly and securely. Select a category to start your quote.
           </p>
         </div>
-        
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-2xl mx-auto">
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto">
           {deviceCategories.map((category) => (
             <motion.button
               key={category.id}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ y: -4, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setShowForm?.(true)}
-              className="p-6 rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-all"
+              className="group p-6 rounded-2xl border border-gray-200/60 bg-white/70 backdrop-blur shadow-sm hover:shadow-xl transition-all"
             >
-              <div className="flex flex-col items-center space-y-3">
+              <div className="flex flex-col items-center space-y-4">
                 {category.icon ? (
-                  <img src={category.icon} alt={category.name} className="w-12 h-12 object-contain" />
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center ring-1 ring-gray-200">
+                    <img src={category.icon} alt={category.name} className="w-9 h-9 object-contain" />
+                  </div>
                 ) : (
-                  <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center ring-1 ring-gray-200">
                     <span className="text-2xl">
                       {category.name === 'Smartphones' ? '📱' : 
                        category.name === 'Tablets' ? '📱' : 
@@ -785,10 +788,35 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
                     </span>
                   </div>
                 )}
-                <span className="font-medium text-center">{category.name}</span>
+                <span className="font-semibold text-gray-900 text-center">{category.name}</span>
+                <span className="text-xs text-gray-500 text-center">Tap to begin</span>
               </div>
             </motion.button>
           ))}
+        </div>
+
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="bg-gray-50 rounded-xl p-5 flex items-center gap-4 border border-gray-200">
+            <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center text-lg">1</div>
+            <div>
+              <div className="font-semibold text-gray-900">Pick your device</div>
+              <div className="text-sm text-gray-600">Choose category, model, storage and condition</div>
+            </div>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-5 flex items-center gap-4 border border-gray-200">
+            <div className="w-10 h-10 rounded-lg bg-purple-600 text-white flex items-center justify-center text-lg">2</div>
+            <div>
+              <div className="font-semibold text-gray-900">Get your quote</div>
+              <div className="text-sm text-gray-600">See your instant payout amount</div>
+            </div>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-5 flex items-center gap-4 border border-gray-200">
+            <div className="w-10 h-10 rounded-lg bg-green-600 text-white flex items-center justify-center text-lg">3</div>
+            <div>
+              <div className="font-semibold text-gray-900">Ship & get paid</div>
+              <div className="text-sm text-gray-600">Send your device and receive payment fast</div>
+            </div>
+          </div>
         </div>
       </div>
     );

@@ -1,13 +1,35 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../../utils/supabase';
+import { withAuth, withRateLimit } from '../../../../lib/security';
+import { z } from 'zod';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+const updateSchema = z.object({
+  type: z.literal('model'),
+  data: z.object({
+    name: z.string().min(1),
+    modelNumber: z.string().nullable().optional(),
+    releaseYear: z.union([z.string(), z.number()]).optional(),
+    imageUrl: z.string().url().nullable().optional(),
+    categoryId: z.union([z.string(), z.number()]),
+    brandId: z.union([z.string(), z.number()]),
+    displayOrder: z.union([z.string(), z.number()]).optional(),
+  }),
+  storageOptions: z.array(z.object({
+    storage: z.string().min(1).optional(),
+    excellentPrice: z.union([z.string(), z.number()]).optional(),
+    goodPrice: z.union([z.string(), z.number()]).optional(),
+    fairPrice: z.union([z.string(), z.number()]).optional(),
+    poorPrice: z.union([z.string(), z.number()]).optional(),
+  })).optional(),
+});
+
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
   const deviceId = parseInt(id as string);
 
   if (req.method === 'PUT') {
     try {
-      const { type, data, storageOptions } = req.body;
+      const { type, data, storageOptions } = updateSchema.parse(req.body);
 
       switch (type) {
         case 'model':
@@ -20,13 +42,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const { data: model, error: modelError } = await supabaseAdmin
               .from('DeviceModel')
               .update({
-                name: deviceData.name,
-                modelNumber: deviceData.modelNumber,
-                releaseYear: parseInt(deviceData.releaseYear),
-                imageUrl: deviceData.imageUrl || null,
-                categoryId: parseInt(deviceData.categoryId),
-                brandId: parseInt(deviceData.brandId),
-                displayOrder: parseInt(deviceData.displayOrder) || 0,
+                 name: deviceData.name,
+                 modelNumber: deviceData.modelNumber || null,
+                 releaseYear: deviceData.releaseYear ? parseInt(String(deviceData.releaseYear)) : null,
+                 imageUrl: deviceData.imageUrl || null,
+                 categoryId: parseInt(String(deviceData.categoryId)),
+                 brandId: parseInt(String(deviceData.brandId)),
+                 displayOrder: deviceData.displayOrder ? parseInt(String(deviceData.displayOrder)) : 0,
               })
               .eq('id', deviceId)
               .select(`
@@ -64,10 +86,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                       .insert({
                         deviceModelId: deviceId,
                         storage: option.storage,
-                        excellentPrice: parseFloat(option.excellentPrice || '0'),
-                        goodPrice: parseFloat(option.goodPrice || '0'),
-                        fairPrice: parseFloat(option.fairPrice || '0'),
-                        poorPrice: parseFloat(option.poorPrice || '0'),
+                        excellentPrice: parseFloat(String(option.excellentPrice ?? '0')),
+                        goodPrice: parseFloat(String(option.goodPrice ?? '0')),
+                        fairPrice: parseFloat(String(option.fairPrice ?? '0')),
+                        poorPrice: parseFloat(String(option.poorPrice ?? '0')),
                       })
                       .select()
                       .single();
@@ -133,4 +155,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Allow', ['PUT', 'DELETE']);
     res.status(405).end(`Method ${req.method} Not Allowed`);
   }
-} 
+}
+
+export default withAuth(['staff'])(withRateLimit({ windowMs: 60_000, limit: 60, keyPrefix: 'staff:' })(handler));

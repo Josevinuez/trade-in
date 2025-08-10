@@ -1,17 +1,20 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { AuthService } from '../../../../lib/auth';
+import { z } from 'zod';
+import { withRateLimit } from '../../../../src/lib/security';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+const bodySchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
+    const { email, password } = bodySchema.parse(req.body);
 
     const result = await AuthService.authenticateStaff(email, password);
 
@@ -22,10 +25,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Create auth token
     const token = await AuthService.createAuthToken(result.user!.id, 'STAFF');
 
-    const staff = result.user as any; // Type assertion for staff user
+    // Set HttpOnly, Secure cookie
+    const prod = process.env.NODE_ENV === 'production';
+    res.setHeader('Set-Cookie', `auth_token=${token}; Path=/; HttpOnly; ${prod ? 'Secure; ' : ''}SameSite=Strict; Max-Age=3600`);
+
+    const staff = result.user as any;
     res.status(200).json({
       success: true,
-      token,
+      token, // provided for backward compatibility; prefer HttpOnly cookie
       user: {
         id: staff.id,
         email: staff.email,
@@ -37,6 +44,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   } catch (error) {
     console.error('Staff login error:', error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid payload' });
+    }
     res.status(500).json({ error: 'Authentication failed' });
   }
-} 
+}
+
+export default withRateLimit({ windowMs: 60_000, limit: 5, keyPrefix: 'login:' })(handler);

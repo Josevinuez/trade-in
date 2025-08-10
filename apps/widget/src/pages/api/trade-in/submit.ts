@@ -1,7 +1,25 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
+import { withRateLimit } from '../../../lib/security';
+import { z } from 'zod';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+const submitSchema = z.object({
+  customerEmail: z.string().email(),
+  customerName: z.string().min(1),
+  customerPhone: z.string().optional(),
+  customerAddress: z.string().optional(),
+  customerCity: z.string().optional(),
+  customerProvince: z.string().optional(),
+  customerPostalCode: z.string().optional(),
+  deviceModelId: z.union([z.string(), z.number()]),
+  deviceConditionId: z.union([z.string(), z.number()]),
+  storageOptionId: z.union([z.string(), z.number()]),
+  quotedAmount: z.union([z.string(), z.number()]),
+  paymentMethod: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -21,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       quotedAmount,
       paymentMethod,
       notes
-    } = req.body;
+    } = submitSchema.parse(req.body);
 
     // Validate required fields
     if (!customerEmail || !customerName || !deviceModelId || !deviceConditionId || !storageOptionId || !quotedAmount) {
@@ -88,10 +106,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .insert({
         orderNumber,
         customerId: customer.id,
-        deviceModelId: parseInt(deviceModelId),
-        deviceConditionId: parseInt(deviceConditionId),
-        storageOptionId: parseInt(storageOptionId),
-        quotedAmount: parseFloat(quotedAmount),
+      deviceModelId: parseInt(String(deviceModelId)),
+      deviceConditionId: parseInt(String(deviceConditionId)),
+      storageOptionId: parseInt(String(storageOptionId)),
+      quotedAmount: parseFloat(String(quotedAmount)),
         status: 'PENDING',
         paymentMethod: paymentMethod || null,
         notes: notes || '',
@@ -134,4 +152,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error('Trade-in submission error:', error);
     res.status(500).json({ error: 'Failed to submit trade-in order' });
   }
-} 
+}
+
+export default withRateLimit({ windowMs: 60_000, limit: 30, keyPrefix: 'submit:' })(handler);
