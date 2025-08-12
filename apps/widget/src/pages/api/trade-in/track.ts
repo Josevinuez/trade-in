@@ -1,12 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
-import { withRateLimit } from '../../../lib/security';
-import { z } from 'zod';
-
-const trackSchema = z.object({
-  email: z.string().email(),
-  orderNumber: z.string().min(3),
-});
+import { withSecurity } from '../../../lib/security';
+import { schemas } from '../../../lib/validation';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -14,7 +9,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const { email, orderNumber } = trackSchema.parse(req.body);
+    const { email, orderNumber } = req.body; // Validation handled by middleware
 
     if (!email || !orderNumber) {
       return res.status(400).json({ error: 'Email and order number are required' });
@@ -22,18 +17,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // Find the order by email and order number
     const { data: order, error: orderError } = await supabaseAdmin
-      .from('TradeInOrder')
+      .from('trade_in_orders')
       .select(`
         *,
-        customer:Customer(*),
-        deviceModel:DeviceModel(
+        customer:customers(*),
+        deviceModel:device_models(
           *,
-          brand:DeviceBrand(*),
-          category:DeviceCategory(*)
+          brand:device_brands(*),
+          category:device_categories(*)
         ),
-        deviceCondition:DeviceCondition(*)
+        deviceCondition:device_conditions(*)
       `)
-      .eq('orderNumber', orderNumber)
+      .eq('order_number', orderNumber)
       .eq('customer.email', email)
       .single();
 
@@ -44,14 +39,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Format the response
     const orderStatus = {
       id: order.id,
-      orderNumber: order.orderNumber,
+      orderNumber: order.order_number,
       status: order.status,
-      quotedAmount: parseFloat(order.quotedAmount.toString()),
-      finalAmount: order.finalAmount ? parseFloat(order.finalAmount.toString()) : undefined,
-      submittedAt: order.submittedAt,
-      processedAt: order.processedAt || undefined,
-      completedAt: order.completedAt || undefined,
-      customerName: `${order.customer.firstName} ${order.customer.lastName}`.trim(),
+      quotedAmount: parseFloat(order.quoted_amount.toString()),
+      finalAmount: order.final_amount ? parseFloat(order.final_amount.toString()) : undefined,
+      submittedAt: order.submitted_at,
+      processedAt: order.processed_at || undefined,
+      completedAt: order.completed_at || undefined,
+      customerName: `${order.customer.first_name} ${order.customer.last_name}`.trim(),
       deviceModel: `${order.deviceModel.brand.name} ${order.deviceModel.name}`,
       deviceCondition: order.deviceCondition.name,
       notes: order.notes,
@@ -64,4 +59,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withRateLimit({ windowMs: 60_000, limit: 60, keyPrefix: 'track:' })(handler);
+export default withSecurity({
+  auth: false, // Public endpoint but needs security
+  rateLimit: {
+    windowMs: 60 * 1000,
+    limit: 60,
+    keyPrefix: 'track:',
+  },
+  cors: true,
+  sizeLimit: '1mb',
+  validation: {
+    POST: schemas.order.track,
+  },
+  securityHeaders: true,
+})(handler);

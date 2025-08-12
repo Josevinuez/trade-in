@@ -1,7 +1,20 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
+import { withSecurity } from '../../../lib/security';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default withSecurity({
+  auth: false, // Public endpoint but needs security
+  rateLimit: {
+    windowMs: 60 * 1000,
+    limit: 100,
+    keyPrefix: 'catalog:',
+  },
+  cors: true,
+  sizeLimit: '1mb',
+  securityHeaders: true,
+})(handler);
+
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -9,33 +22,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
       // Production logging removed for security
 
-    const [categoriesResult, brandsResult, conditionsResult, modelsResult] = await Promise.all([
-      supabaseAdmin
-        .from('DeviceCategory')
-        .select('*')
-        .eq('isActive', true)
-        .order('name', { ascending: true }),
-      supabaseAdmin
-        .from('DeviceBrand')
-        .select('*')
-        .eq('isActive', true)
-        .order('name', { ascending: true }),
-      supabaseAdmin
-        .from('DeviceCondition')
-        .select('*')
-        .eq('isActive', true)
-        .order('name', { ascending: true }),
-      supabaseAdmin
-        .from('DeviceModel')
-        .select(`
-          *,
-          category:DeviceCategory(*),
-          brand:DeviceBrand(*),
-          storageOptions:DeviceStorageOption(*)
-        `)
-        .eq('isActive', true)
-        .order('name', { ascending: true })
-    ]);
+                const [categoriesResult, brandsResult, conditionsResult, modelsResult] = await Promise.all([
+              supabaseAdmin
+                .from('DeviceCategory')
+                .select('*')
+                .eq('isActive', true)
+                .order('name', { ascending: true }),
+              supabaseAdmin
+                .from('DeviceBrand')
+                .select('*')
+                .eq('isActive', true)
+                .order('name', { ascending: true }),
+              supabaseAdmin
+                .from('DeviceCondition')
+                .select('*')
+                .eq('isActive', true)
+                .order('name', { ascending: true }),
+              supabaseAdmin
+                .from('DeviceModel')
+                .select(`
+                  *,
+                  category:DeviceCategory(*),
+                  brand:DeviceBrand(*),
+                  storageOptions:DeviceStorageOption(*)
+                `)
+                .eq('isActive', true)
+                .order('name', { ascending: true })
+            ]);
 
           // Production logging removed for security
 

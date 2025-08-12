@@ -1,21 +1,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { 
-  Eye, 
-  EyeOff, 
-  Lock, 
-  User, 
-  Shield,
-  AlertCircle,
-  ArrowLeft
-} from 'lucide-react';
+import { Shield, User, Lock, AlertCircle } from 'lucide-react';
+import { supabase } from '../utils/supabase';
 
 export default function StaffLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -23,18 +15,83 @@ export default function StaffLogin() {
     setIsLoading(true);
     setError('');
 
-    // Simulate authentication
-    setTimeout(() => {
-      if (email === 'staff@tradeinpro.com' && password === 'staff123') {
-        // Store auth token
-        localStorage.setItem('staffAuthToken', 'demo-staff-token');
-        localStorage.setItem('staffEmail', email);
-        router.push('/staff-dashboard');
-      } else {
+    try {
+      // Use Supabase built-in authentication
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        console.error('Supabase auth error:', authError);
         setError('Invalid email or password');
+        return;
       }
+
+      if (data.user) {
+        console.log('Supabase auth successful, user:', data.user);
+        
+        // Check if user exists in our staff table - using exact database structure
+        const { data: staff, error: staffError } = await supabase
+          .from('staff')  // lowercase table name
+          .select('*')
+          .eq('email', email)
+          .eq('is_active', true)  // lowercase column name
+          .single();
+
+        if (staffError) {
+          console.error('Staff lookup error:', staffError);
+          console.error('Looking for email:', email);
+          console.error('Error details:', staffError);
+          setError(`Staff account lookup failed: ${staffError.message}`);
+          return;
+        }
+
+        if (!staff) {
+          console.error('No staff record found for email:', email);
+          setError('Staff account not found or inactive');
+          return;
+        }
+
+        console.log('Staff record found:', staff);
+
+        // Store staff user data in localStorage
+        localStorage.setItem('staffUser', JSON.stringify({
+          id: staff.id,
+          email: staff.email,
+          firstName: staff.first_name,  // map from database column name
+          lastName: staff.last_name,    // map from database column name
+          role: staff.role,
+          isActive: staff.is_active     // map from database column name
+        }));
+
+        console.log('Staff data stored in localStorage');
+        
+        // Verify the session is established
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Session after login:', { session: !!session, hasAccessToken: !!session?.access_token });
+        
+        console.log('About to redirect to dashboard...');
+
+        // Try router.push first
+        try {
+          await router.push('/staff-dashboard');
+          console.log('Router redirect successful');
+        } catch (routerError) {
+          console.error('Router redirect failed:', routerError);
+          // Fallback: use window.location
+          window.location.href = '/staff-dashboard';
+          console.log('Fallback redirect executed');
+        }
+        
+        console.log('Redirect command executed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('Network error. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -54,6 +111,24 @@ export default function StaffLogin() {
 
         {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Staff Login</h1>
+            <p className="text-gray-600 mt-2">Access the staff dashboard</p>
+          </div>
+
+          {/* Demo Credentials Notice */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-6">
+            <div className="flex items-center text-sm text-green-800">
+              <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" clipRule="evenodd" />
+              </svg>
+              <span><strong>Production Ready:</strong> Use <code className="bg-green-100 px-1 rounded">staff@tradeinpro.com</code> / <code className="bg-green-100 px-1 rounded">staff123</code> to connect to your Supabase database</span>
+            </div>
+          </div>
+
           <form onSubmit={handleLogin} className="space-y-6">
             {error && (
               <div className="flex items-center p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -92,24 +167,13 @@ export default function StaffLogin() {
                 </div>
                 <input
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="••••••••"
                   required
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
               </div>
             </div>
 
@@ -137,7 +201,7 @@ export default function StaffLogin() {
               href="/"
               className="inline-flex items-center text-purple-600 hover:text-purple-700 text-sm font-medium"
             >
-              <ArrowLeft className="w-4 h-4 mr-1" />
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mr-1"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
               Back to Home
             </a>
           </div>

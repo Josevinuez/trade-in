@@ -1,16 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Get environment variables with proper fallbacks
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// Validate environment variables
-if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
-  console.error('Missing Supabase environment variables:', {
+// Service role key is only available server-side
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Validate environment variables for client-side usage
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing required Supabase environment variables for client:', {
     url: !!supabaseUrl,
-    anonKey: !!supabaseAnonKey,
-    serviceKey: !!supabaseServiceKey
+    anonKey: !!supabaseAnonKey
   });
+  throw new Error('Missing required Supabase environment variables for client');
 }
 
 // Client for browser usage (with RLS)
@@ -19,16 +22,68 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
+  },
+  db: {
+    schema: 'public'
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'trade-in-widget'
+    }
   }
 });
 
 // Admin client for server-side operations (bypasses RLS)
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
+// Only create if service key is available (server-side only)
+export const supabaseAdmin = (() => {
+  if (typeof window !== 'undefined') {
+    // We're on the client side, don't create admin client
+    console.log('Supabase: Client-side detected, admin client not available');
+    return null;
   }
-});
+  
+  if (!supabaseServiceKey) {
+    console.error('Supabase: Service role key not available server-side');
+    return null;
+  }
+  
+  console.log('Supabase: Creating admin client for server-side operations');
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    },
+    db: {
+      schema: 'public'
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'trade-in-widget-admin'
+      }
+    }
+  });
+})();
+
+// Test connection function
+export async function testSupabaseConnection() {
+  try {
+    const { data, error } = await supabase
+      .from('DeviceCategory')
+      .select('count')
+      .limit(1);
+    
+    if (error) {
+      console.error('Supabase connection test failed:', error);
+      return false;
+    }
+    
+    console.log('Supabase connection successful');
+    return true;
+  } catch (err) {
+    console.error('Supabase connection test error:', err);
+    return false;
+  }
+}
 
 // Types for our database tables
 export interface DeviceCategory {

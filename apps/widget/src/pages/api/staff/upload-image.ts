@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
-import { withAuth, withRateLimit } from '../../../lib/security';
+import { withSecurity } from '../../../lib/security';
+import { schemas } from '../../../lib/validation';
 
 export const config = {
   api: {
@@ -106,4 +107,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withAuth(['staff'])(withRateLimit({ windowMs: 60_000, limit: 20, keyPrefix: 'upload:' })(handler));
+export default withSecurity({
+  auth: true,
+  roles: ['staff'],
+  rateLimit: {
+    windowMs: 60 * 1000,
+    limit: 20,
+    keyPrefix: 'upload:',
+  },
+  cors: true,
+  sizeLimit: '10mb',
+  validation: {
+    POST: schemas.upload.image,
+  },
+  securityHeaders: true,
+})(handler);

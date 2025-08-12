@@ -2,9 +2,20 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Simple security check - just verify we have a token
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
   if (req.method === 'GET') {
     try {
       const { type } = req.query;
+
+      if (!supabaseAdmin) {
+        console.error('Devices API: supabaseAdmin not available');
+        return res.status(500).json({ error: 'Database connection not available' });
+      }
 
       switch (type) {
         case 'categories':
@@ -14,8 +25,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .select('*')
             .order('name', { ascending: true });
           
-          if (categoriesError) throw categoriesError;
-          console.log('Categories found:', categoriesData);
+          if (categoriesError) {
+            console.error('Devices API: Categories error:', categoriesError);
+            return res.status(500).json({ error: 'Failed to fetch categories' });
+          }
+          console.log('Categories found:', categoriesData?.length || 0);
           return res.status(200).json(categoriesData);
 
         case 'brands':
@@ -24,7 +38,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .select('*')
             .order('name', { ascending: true });
           
-          if (brandsError) throw brandsError;
+          if (brandsError) {
+            console.error('Devices API: Brands error:', brandsError);
+            return res.status(500).json({ error: 'Failed to fetch brands' });
+          }
           return res.status(200).json(brandsData);
 
         case 'conditions':
@@ -33,7 +50,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .select('*')
             .order('name', { ascending: true });
           
-          if (conditionsError) throw conditionsError;
+          if (conditionsError) {
+            console.error('Devices API: Conditions error:', conditionsError);
+            return res.status(500).json({ error: 'Failed to fetch conditions' });
+          }
           return res.status(200).json(conditionsData);
 
         case 'models':
@@ -48,10 +68,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               `)
               .order('name', { ascending: true });
             
-            if (modelsError) throw modelsError;
+            if (modelsError) {
+              console.error('Devices API: Models error:', modelsError);
+              return res.status(500).json({ error: 'Failed to fetch models' });
+            }
             return res.status(200).json(modelsData);
           } catch (error) {
-            console.error('Models fetch error:', error);
+            console.error('Devices API: Models fetch error:', error);
             return res.status(500).json({ error: 'Failed to fetch models' });
           }
 
@@ -68,10 +91,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             `).order('name', { ascending: true })
           ]);
 
-          if (categoriesResult.error) throw categoriesResult.error;
-          if (brandsResult.error) throw brandsResult.error;
-          if (conditionsResult.error) throw conditionsResult.error;
-          if (modelsResult.error) throw modelsResult.error;
+          if (categoriesResult.error) {
+            console.error('Devices API: Categories error:', categoriesResult.error);
+            return res.status(500).json({ error: 'Failed to fetch categories' });
+          }
+          if (brandsResult.error) {
+            console.error('Devices API: Brands error:', brandsResult.error);
+            return res.status(500).json({ error: 'Failed to fetch brands' });
+          }
+          if (conditionsResult.error) {
+            console.error('Devices API: Conditions error:', conditionsResult.error);
+            return res.status(500).json({ error: 'Failed to fetch conditions' });
+          }
+          if (modelsResult.error) {
+            console.error('Devices API: Models error:', modelsResult.error);
+            return res.status(500).json({ error: 'Failed to fetch models' });
+          }
 
           return res.status(200).json({
             categories: categoriesResult.data,
@@ -81,7 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           });
       }
     } catch (error) {
-      console.error('Device catalog error:', error);
+      console.error('Devices API: Error:', error);
       return res.status(500).json({ error: 'Failed to fetch device catalog' });
     }
   }
@@ -89,6 +124,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'POST') {
     try {
       const { type, data } = req.body;
+
+      if (!supabaseAdmin) {
+        console.error('Devices API: supabaseAdmin not available');
+        return res.status(500).json({ error: 'Database connection not available' });
+      }
 
       switch (type) {
         case 'category':
@@ -102,7 +142,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .select()
             .single();
           
-          if (categoryError) throw categoryError;
+          if (categoryError) {
+            console.error('Devices API: Category create error:', categoryError);
+            return res.status(500).json({ error: 'Failed to create category' });
+          }
           return res.status(201).json(category);
 
         case 'brand':
@@ -115,7 +158,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .select()
             .single();
           
-          if (brandError) throw brandError;
+          if (brandError) {
+            console.error('Devices API: Brand create error:', brandError);
+            return res.status(500).json({ error: 'Failed to create brand' });
+          }
           return res.status(201).json(brand);
 
         case 'condition':
@@ -128,7 +174,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .select()
             .single();
           
-          if (conditionError) throw conditionError;
+          if (conditionError) {
+            console.error('Devices API: Condition create error:', conditionError);
+            return res.status(500).json({ error: 'Failed to create condition' });
+          }
           return res.status(201).json(condition);
 
         case 'model':
@@ -166,7 +215,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               `)
               .single();
 
-            if (modelError) throw modelError;
+            if (modelError) {
+              console.error('Devices API: Model create error:', modelError);
+              return res.status(500).json({ error: 'Failed to create model' });
+            }
             console.log('Device created:', model.id);
 
             // Create storage options if provided
@@ -184,40 +236,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                       .insert({
                         deviceModelId: model.id,
                         storage: option.storage,
-                        excellentPrice: option.excellentPrice ? parseFloat(option.excellentPrice) : 0,
-                        goodPrice: option.goodPrice ? parseFloat(option.goodPrice) : 0,
-                        fairPrice: option.fairPrice ? parseFloat(option.fairPrice) : 0,
-                        poorPrice: option.poorPrice ? parseFloat(option.poorPrice) : 0,
+                        price: option.price || 0,
                         isActive: true,
                       })
                       .select()
                       .single();
 
-                    if (storageError) throw storageError;
-                    console.log('Storage option created:', storageOption);
-                  } catch (storageError) {
-                    console.error('Storage option creation failed:', storageError);
+                    if (storageError) {
+                      console.error('Storage option creation error:', storageError);
+                    } else {
+                      console.log('Storage option created:', storageOption.id);
+                    }
+                  } catch (storageErr) {
+                    console.error('Storage option creation failed:', storageErr);
                   }
-                } else {
-                  console.log('Skipping option - missing storage');
                 }
               }
-            } else {
-              console.log('No storage options provided');
             }
 
             return res.status(201).json(model);
-          } catch (error) {
-            console.error('Device creation error:', error);
-            return res.status(500).json({ error: 'Failed to create device', details: error instanceof Error ? error.message : 'Unknown error' });
+          } catch (modelErr) {
+            console.error('Model creation failed:', modelErr);
+            return res.status(500).json({ error: 'Failed to create model' });
           }
 
         default:
           return res.status(400).json({ error: 'Invalid type' });
       }
-    } catch (error) {
-      console.error('Device creation error:', error);
-      return res.status(500).json({ error: 'Failed to create device' });
+    } catch (error: any) {
+      console.error('Devices API: Error:', error);
+      return res.status(500).json({ error: 'Failed to create device item' });
     }
   }
 
@@ -225,6 +273,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const { type, id, data } = req.body;
       const deviceId = id || req.query.id; // Get ID from body or query params
+
+      if (!supabaseAdmin) {
+        console.error('Devices API: supabaseAdmin not available');
+        return res.status(500).json({ error: 'Database connection not available' });
+      }
 
       switch (type) {
         case 'category':
@@ -240,7 +293,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .select()
             .single();
           
-          if (categoryError) throw categoryError;
+          if (categoryError) {
+            console.error('Devices API: Category update error:', categoryError);
+            return res.status(500).json({ error: 'Failed to update category' });
+          }
           return res.status(200).json(category);
 
         case 'brand':
@@ -252,11 +308,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               isActive: data.isActive,
             })
             .eq('id', parseInt(deviceId))
-            .eq('id', parseInt(deviceId))
             .select()
             .single();
           
-          if (brandError) throw brandError;
+          if (brandError) {
+            console.error('Devices API: Brand update error:', brandError);
+            return res.status(500).json({ error: 'Failed to update brand' });
+          }
           return res.status(200).json(brand);
 
         case 'condition':
@@ -271,7 +329,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .select()
             .single();
           
-          if (conditionError) throw conditionError;
+          if (conditionError) {
+            console.error('Devices API: Condition update error:', conditionError);
+            return res.status(500).json({ error: 'Failed to update condition' });
+          }
           return res.status(200).json(condition);
 
         case 'model':
@@ -301,7 +362,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               `)
               .single();
 
-            if (modelError) throw modelError;
+            if (modelError) {
+              console.error('Devices API: Model update error:', modelError);
+              return res.status(500).json({ error: 'Failed to update model' });
+            }
             console.log('Device updated:', model.id);
 
             // Handle storage options update
@@ -314,7 +378,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 .delete()
                 .eq('deviceModelId', parseInt(deviceId));
 
-              if (deleteError) throw deleteError;
+              if (deleteError) {
+                console.error('Devices API: Storage options delete error:', deleteError);
+                return res.status(500).json({ error: 'Failed to delete existing storage options' });
+              }
               console.log('Deleted existing storage options');
 
               // Create new storage options
@@ -329,16 +396,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                       .insert({
                         deviceModelId: parseInt(deviceId),
                         storage: option.storage,
-                        excellentPrice: parseFloat(option.excellentPrice || '0'),
-                        goodPrice: parseFloat(option.goodPrice || '0'),
-                        fairPrice: parseFloat(option.fairPrice || '0'),
-                        poorPrice: parseFloat(option.poorPrice || '0'),
+                        price: parseFloat(option.price || '0'),
+                        isActive: true,
                       })
                       .select()
                       .single();
 
-                    if (storageError) throw storageError;
-                    console.log('Storage option created:', storageOption);
+                    if (storageError) {
+                      console.error('Storage option creation error:', storageError);
+                    } else {
+                      console.log('Storage option created:', storageOption.id);
+                    }
                   } catch (storageError) {
                     console.error('Storage option creation failed:', storageError);
                   }
@@ -352,15 +420,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
             return res.status(200).json(model);
           } catch (error) {
-            console.error('Device update error:', error);
-            return res.status(500).json({ error: 'Failed to update device', details: error instanceof Error ? error.message : 'Unknown error' });
+            console.error('Devices API: Model update error:', error);
+            return res.status(500).json({ error: 'Failed to update model' });
           }
 
         default:
           return res.status(400).json({ error: 'Invalid type' });
       }
     } catch (error) {
-      console.error('Device update error:', error);
+      console.error('Devices API: Error:', error);
       return res.status(500).json({ error: 'Failed to update device' });
     }
   }
@@ -373,6 +441,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'Device ID is required' });
       }
 
+      if (!supabaseAdmin) {
+        console.error('Devices API: supabaseAdmin not available');
+        return res.status(500).json({ error: 'Database connection not available' });
+      }
+
       console.log('Deleting device:', deviceId);
 
       // Delete storage options first
@@ -381,7 +454,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .delete()
         .eq('deviceModelId', parseInt(deviceId as string));
 
-      if (deleteStorageError) throw deleteStorageError;
+      if (deleteStorageError) {
+        console.error('Devices API: Storage options delete error:', deleteStorageError);
+        return res.status(500).json({ error: 'Failed to delete storage options' });
+      }
       console.log('Deleted storage options for device:', deviceId);
 
       // Delete the device
@@ -392,15 +468,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .select()
         .single();
 
-      if (deleteDeviceError) throw deleteDeviceError;
-      console.log('Deleted device:', deletedDevice.id);
+      if (deleteDeviceError) {
+        console.error('Devices API: Device delete error:', deleteDeviceError);
+        return res.status(500).json({ error: 'Failed to delete device' });
+      }
 
-      return res.status(200).json({ message: 'Device deleted successfully' });
+      console.log('Device deleted:', deletedDevice.id);
+      return res.status(200).json({ message: 'Device deleted successfully', device: deletedDevice });
     } catch (error) {
-      console.error('Device deletion error:', error);
-      return res.status(500).json({ error: 'Failed to delete device', details: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Devices API: Error:', error);
+      return res.status(500).json({ error: 'Failed to delete device' });
     }
   }
 
+  res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
   return res.status(405).json({ error: 'Method not allowed' });
 } 

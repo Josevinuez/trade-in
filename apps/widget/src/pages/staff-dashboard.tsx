@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { apiRequest, isAuthenticated, logout } from '../utils/api';
 import { 
   Smartphone, 
   Shield, 
@@ -192,7 +193,7 @@ export default function StaffDashboard() {
     deviceConditionId: '',
     storageOptionId: '',
     quotedAmount: '',
-    paymentMethod: 'e-transfer',
+    paymentMethod: 'E_TRANSFER',
     notes: '',
   });
 
@@ -239,37 +240,52 @@ export default function StaffDashboard() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('staffAuthToken');
-    if (!token) {
-      router.push('/staff-login');
-      return;
-    }
-
     const validateToken = async () => {
       try {
-        // For demo purposes, just check if token exists
-        const staffEmail = localStorage.getItem('staffEmail');
-        if (token && staffEmail) {
-          setStaff({ email: staffEmail, role: 'staff' });
+        console.log('Dashboard: Starting authentication validation...');
+        
+        // Add a small delay to ensure Supabase session is fully established
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const authenticated = await isAuthenticated();
+        console.log('Dashboard: isAuthenticated result:', authenticated);
+        
+        if (!authenticated) {
+          console.log('Dashboard: Not authenticated, redirecting to login');
+          router.push('/staff-login');
+          return;
+        }
+
+        const userData = localStorage.getItem('staffUser');
+        console.log('Dashboard: staffUser data from localStorage:', userData);
+        
+        if (userData) {
+          const user = JSON.parse(userData);
+          console.log('Dashboard: Parsed user data:', user);
+          setStaff({ email: user.email, role: user.role });
           setIsLoading(false);
+          console.log('Dashboard: Authentication successful, dashboard ready');
         } else {
-          localStorage.removeItem('staffAuthToken');
-          localStorage.removeItem('staffEmail');
+          console.log('Dashboard: No staff user data, redirecting to login');
+          // If no staff user data, redirect to login
           router.push('/staff-login');
         }
       } catch (error) {
-        console.error('Token validation error:', error);
-        localStorage.removeItem('staffAuthToken');
-        localStorage.removeItem('staffEmail');
+        console.error('Dashboard: Token validation error:', error);
         router.push('/staff-login');
       }
     };
 
-    validateToken();
+    // Add a longer delay before starting validation to ensure everything is ready
+    const timer = setTimeout(validateToken, 1000);
+    
+    return () => clearTimeout(timer);
   }, [router]);
 
   useEffect(() => {
     if (staff) {
+      console.log('Dashboard: Staff authenticated, fetching data...');
+      // Re-enable API calls now that authentication is working
       fetchOrders();
       fetchDeviceManagementData();
       fetchBrands();
@@ -280,13 +296,21 @@ export default function StaffDashboard() {
   const fetchOrders = async () => {
     setIsLoadingOrders(true);
     try {
-      const response = await fetch('/api/staff/orders');
+      console.log('Dashboard: Fetching orders...');
+      const response = await apiRequest('/api/staff/orders');
+      console.log('Dashboard: Orders response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        setOrders(data.orders);
+        console.log('Dashboard: Orders data received:', data);
+        // Ensure we always set an array
+        setOrders(Array.isArray(data.orders) ? data.orders : []);
+      } else {
+        console.error('Dashboard: Orders fetch failed with status:', response.status);
       }
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      console.error('Dashboard: Error fetching orders:', error);
+      setOrders([]); // Set empty array on error
     } finally {
       setIsLoadingOrders(false);
     }
@@ -296,33 +320,38 @@ export default function StaffDashboard() {
   const fetchDeviceManagementData = async () => {
     try {
       const [categoriesResponse, brandsResponse, conditionsResponse, modelsResponse] = await Promise.all([
-        fetch('/api/staff/devices?type=categories'),
-        fetch('/api/staff/devices?type=brands'),
-        fetch('/api/staff/devices?type=conditions'),
-        fetch('/api/staff/devices?type=models')
+        apiRequest('/api/staff/devices?type=categories'),
+        apiRequest('/api/staff/devices?type=brands'),
+        apiRequest('/api/staff/devices?type=conditions'),
+        apiRequest('/api/staff/devices?type=models')
       ]);
 
       if (categoriesResponse.ok) {
         const categoriesData = await categoriesResponse.json();
-        setCategories(categoriesData);
+        setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       }
 
       if (brandsResponse.ok) {
         const brandsData = await brandsResponse.json();
-        setBrands(brandsData);
+        setBrands(Array.isArray(brandsData) ? brandsData : []);
       }
 
       if (conditionsResponse.ok) {
         const conditionsData = await conditionsResponse.json();
-        setDeviceConditions(conditionsData);
+        setDeviceConditions(Array.isArray(conditionsData) ? conditionsData : []);
       }
 
       if (modelsResponse.ok) {
         const modelsData = await modelsResponse.json();
-        setDevices(modelsData);
+        setDevices(Array.isArray(modelsData) ? modelsData : []);
       }
     } catch (error) {
       console.error('Error fetching device management data:', error);
+      // Set empty arrays on error
+      setCategories([]);
+      setBrands([]);
+      setDeviceConditions([]);
+      setDevices([]);
     }
   };
 
@@ -338,9 +367,8 @@ export default function StaffDashboard() {
           const imageData = e.target?.result as string;
           console.log('File converted to base64, length:', imageData.length);
           
-          const response = await fetch('/api/staff/upload-image', {
+          const response = await apiRequest('/api/staff/upload-image', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               imageData,
               fileName: file.name,
@@ -432,9 +460,8 @@ export default function StaffDashboard() {
           })),
       });
 
-      const response = await fetch('/api/staff/devices', {
+      const response = await apiRequest('/api/staff/devices', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'model',
           data: formData,
@@ -490,9 +517,8 @@ export default function StaffDashboard() {
 
       console.log('Updating device with data:', requestData);
 
-      const response = await fetch(`/api/staff/devices/${editingDevice.id}`, {
+      const response = await apiRequest(`/api/staff/devices/${editingDevice.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestData),
       });
 
@@ -521,7 +547,7 @@ export default function StaffDashboard() {
     setConfirmMessage('Are you sure you want to delete this device?');
     setConfirmAction(() => async () => {
       try {
-        const response = await fetch(`/api/staff/devices/${deviceId}`, {
+        const response = await apiRequest(`/api/staff/devices/${deviceId}`, {
           method: 'DELETE',
         });
 
@@ -571,7 +597,7 @@ export default function StaffDashboard() {
   const handleDeactivateDevice = async (deviceId: number) => {
     try {
       // First get the current device data
-      const deviceResponse = await fetch(`/api/staff/devices?type=models`);
+      const deviceResponse = await apiRequest(`/api/staff/devices?type=models`);
       const devices = await deviceResponse.json();
       const device = devices.find((d: any) => d.id === deviceId);
       
@@ -580,9 +606,8 @@ export default function StaffDashboard() {
         return;
       }
 
-      const response = await fetch(`/api/staff/devices/${deviceId}`, {
+      const response = await apiRequest(`/api/staff/devices/${deviceId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'model',
           data: {
@@ -645,10 +670,8 @@ export default function StaffDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('staffAuthToken');
-    localStorage.removeItem('staffEmail');
-    router.push('/staff-login');
+  const handleLogout = async () => {
+    await logout();
   };
 
   const getStatusColor = (status: string) => {
@@ -687,15 +710,17 @@ export default function StaffDashboard() {
   // Brand management functions
   const fetchBrands = async () => {
     try {
-      const response = await fetch('/api/staff/brands?type=brands');
+      const response = await apiRequest('/api/staff/brands?type=brands');
       if (response.ok) {
         const data = await response.json();
-        setAllBrands(data);
+        setAllBrands(Array.isArray(data) ? data : []);
       } else {
         console.error('Failed to fetch brands');
+        setAllBrands([]);
       }
     } catch (error) {
       console.error('Error fetching brands:', error);
+      setAllBrands([]);
     }
   };
 
@@ -711,9 +736,8 @@ export default function StaffDashboard() {
           const imageData = e.target?.result as string;
           console.log('File converted to base64, length:', imageData.length);
           
-          const response = await fetch('/api/staff/upload-image', {
+          const response = await apiRequest('/api/staff/upload-image', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               imageData,
               fileName: file.name,
@@ -756,11 +780,8 @@ export default function StaffDashboard() {
 
   const handleAddBrand = async () => {
     try {
-      const response = await fetch('/api/staff/brands', {
+      const response = await apiRequest('/api/staff/brands', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           type: 'brand',
           data: brandFormData,
@@ -787,11 +808,8 @@ export default function StaffDashboard() {
     if (!editingBrand) return;
 
     try {
-      const response = await fetch(`/api/staff/brands/${editingBrand.id}`, {
+      const response = await apiRequest(`/api/staff/brands/${editingBrand.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           type: 'brand',
           data: brandFormData,
@@ -822,7 +840,7 @@ export default function StaffDashboard() {
     setConfirmMessage('Are you sure you want to delete this brand?');
     setConfirmAction(() => async () => {
       try {
-        const response = await fetch(`/api/staff/brands/${brandId}`, {
+        const response = await apiRequest(`/api/staff/brands/${brandId}`, {
           method: 'DELETE',
         });
 
@@ -885,11 +903,8 @@ export default function StaffDashboard() {
 
     setIsUpdatingOrder(true);
     try {
-      const response = await fetch(`/api/staff/orders/${selectedOrder.id}`, {
+      const response = await apiRequest(`/api/staff/orders/${selectedOrder.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           status: orderStatus,
           trackingNumber,
@@ -935,7 +950,7 @@ export default function StaffDashboard() {
     setConfirmMessage('Are you sure you want to delete this order? This action cannot be undone.');
     setConfirmAction(() => async () => {
       try {
-        const response = await fetch(`/api/staff/orders/${orderId}`, {
+        const response = await apiRequest(`/api/staff/orders/${orderId}`, {
           method: 'DELETE',
         });
 
@@ -958,15 +973,17 @@ export default function StaffDashboard() {
   const fetchClients = async () => {
     setIsLoadingClients(true);
     try {
-      const response = await fetch('/api/staff/clients');
+      const response = await apiRequest('/api/staff/clients');
       if (response.ok) {
         const data = await response.json();
-        setClients(data.clients || []);
+        setClients(Array.isArray(data.clients) ? data.clients : []);
       } else {
         console.error('Failed to fetch clients');
+        setClients([]);
       }
     } catch (error) {
       console.error('Error fetching clients:', error);
+      setClients([]);
     } finally {
       setIsLoadingClients(false);
     }
@@ -984,11 +1001,8 @@ export default function StaffDashboard() {
   // Order creation functions
   const handleAddOrder = async () => {
     try {
-      const response = await fetch('/api/staff/orders', {
+      const response = await apiRequest('/api/staff/orders', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(orderFormData),
       });
 
@@ -1021,7 +1035,7 @@ export default function StaffDashboard() {
       deviceConditionId: '',
       storageOptionId: '',
       quotedAmount: '',
-      paymentMethod: 'e-transfer',
+      paymentMethod: 'E_TRANSFER',
       notes: '',
     });
   };
@@ -1029,11 +1043,8 @@ export default function StaffDashboard() {
   // Client management functions
   const handleAddClient = async () => {
     try {
-      const response = await fetch('/api/staff/clients', {
+      const response = await apiRequest('/api/staff/clients', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(clientFormData),
       });
 
@@ -1057,11 +1068,8 @@ export default function StaffDashboard() {
     if (!editingClient) return;
 
     try {
-      const response = await fetch('/api/staff/clients', {
+      const response = await apiRequest('/api/staff/clients', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           id: editingClient.id,
           ...clientFormData,
@@ -1091,11 +1099,8 @@ export default function StaffDashboard() {
     setConfirmMessage('Are you sure you want to delete this client? This action cannot be undone.');
     setConfirmAction(() => async () => {
       try {
-        const response = await fetch('/api/staff/clients', {
+        const response = await apiRequest('/api/staff/clients', {
           method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify({ id: clientId }),
         });
 
@@ -1143,11 +1148,23 @@ export default function StaffDashboard() {
 
   // Filter clients based on search term
   const filteredClients = (clients || []).filter(client => {
+    // Defensive check - ensure client exists and has required properties
+    if (!client || typeof client !== 'object') {
+      console.warn('Invalid client object:', client);
+      return false;
+    }
+    
+    // Log the actual client structure for debugging
+    if (clients && clients.length > 0 && client === clients[0]) {
+      console.log('First client object:', client);
+      console.log('Client keys:', Object.keys(client));
+    }
+    
     const searchLower = clientSearchTerm.toLowerCase();
     return (
-      client.firstName.toLowerCase().includes(searchLower) ||
-      client.lastName.toLowerCase().includes(searchLower) ||
-      client.email.toLowerCase().includes(searchLower) ||
+      (client.firstName && client.firstName.toLowerCase().includes(searchLower)) ||
+      (client.lastName && client.lastName.toLowerCase().includes(searchLower)) ||
+      (client.email && client.email.toLowerCase().includes(searchLower)) ||
       (client.phone && client.phone.toLowerCase().includes(searchLower)) ||
       (client.addressLine1 && client.addressLine1.toLowerCase().includes(searchLower)) ||
       (client.city && client.city.toLowerCase().includes(searchLower)) ||
@@ -1157,23 +1174,25 @@ export default function StaffDashboard() {
   });
 
   // Filter devices based on search term
-  const filteredDevices = (devices || []).filter(device => {
+  const filteredDevices = (Array.isArray(devices) ? devices : []).filter(device => {
+    if (!device || typeof device !== 'object') return false;
     const searchLower = deviceSearchTerm.toLowerCase();
     return (
-      device.name.toLowerCase().includes(searchLower) ||
+      (device.name && device.name.toLowerCase().includes(searchLower)) ||
       (device.modelNumber && device.modelNumber.toLowerCase().includes(searchLower)) ||
       (device.brand?.name && device.brand.name.toLowerCase().includes(searchLower)) ||
       (device.category?.name && device.category.name.toLowerCase().includes(searchLower))
     );
   });
 
-  const filteredOrders = (orders || []).filter(order => {
+  const filteredOrders = (Array.isArray(orders) ? orders : []).filter(order => {
+    if (!order || typeof order !== 'object') return false;
     const matchesSearch = 
-      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.deviceModel.name.toLowerCase().includes(searchTerm.toLowerCase());
+      (order.orderNumber && order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (order.customer?.firstName && order.customer.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (order.customer?.lastName && order.customer.lastName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (order.customer?.email && order.customer.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (order.deviceModel?.name && order.deviceModel.name.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     

@@ -7,8 +7,7 @@ cat > apps/widget/.env.local << EOF
 # Database (Supabase)
 DATABASE_URL="your_supabase_database_url_here"
 
-# Vercel Blob Storage
-BLOB_READ_WRITE_TOKEN="your_vercel_blob_token_here"
+
 
 # Staff Authentication (for demo)
 STAFF_EMAIL="admin@tradeinpro.com"

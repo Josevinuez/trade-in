@@ -1,25 +1,17 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../../utils/supabase';
-import { withAuth, withRateLimit } from '../../../../lib/security';
-import { z } from 'zod';
-
-const updateSchema = z.object({
-  status: z.string().min(1).optional(),
-  finalAmount: z.union([z.number(), z.string()]).optional(),
-  notes: z.string().optional(),
-  trackingNumber: z.string().optional(),
-  paymentMethod: z.string().optional(),
-  sendForApproval: z.boolean().optional(),
-  deviceConditionId: z.union([z.string(), z.number()]).optional(),
-});
+import { withSecurity } from '../../../../lib/security';
+import { schemas } from '../../../../lib/validation';
+import { AuthenticatedRequest } from '../../../../lib/auth';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
   const orderId = parseInt(id as string);
+  const authenticatedReq = req as AuthenticatedRequest;
 
   if (req.method === 'PUT') {
     try {
-      const { status, finalAmount, notes, trackingNumber, paymentMethod, sendForApproval, deviceConditionId } = updateSchema.parse(req.body);
+      const { status, finalAmount, notes, trackingNumber, paymentMethod, sendForApproval, deviceConditionId } = req.body;
 
       const updateData: any = {
         status,
@@ -76,10 +68,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       await supabaseAdmin
         .from('OrderStatusHistory')
         .insert({
-          orderId,
+          orderId: orderId,
           status: updateData.status,
           notes: notes || (sendForApproval ? 'Sent to customer for approval' : `Status updated to ${updateData.status}`),
-          updatedBy: 1 // Default staff member
+          updatedBy: authenticatedReq.user?.id || 1 // Use authenticated user ID
         });
 
       res.status(200).json(order);
@@ -114,4 +106,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withAuth(['staff'])(withRateLimit({ windowMs: 60_000, limit: 60, keyPrefix: 'staff:' })(handler));
+// Apply comprehensive security middleware
+export default withSecurity({
+  auth: true, // Require authentication
+  roles: ['staff'], // Only staff can access
+  rateLimit: {
+    windowMs: 60 * 1000, // 1 minute
+    limit: 60, // 60 requests per minute
+    keyPrefix: 'orders:',
+  },
+  cors: true, // Enable CORS
+  sizeLimit: '1mb', // Limit request size
+  validation: {
+    PUT: schemas.order.update, // Use the order update schema
+  },
+  securityHeaders: true, // Enable security headers
+})(handler);

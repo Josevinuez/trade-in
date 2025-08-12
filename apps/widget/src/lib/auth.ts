@@ -1,11 +1,22 @@
 import bcrypt from 'bcryptjs';
-import { supabaseAdmin } from '../src/utils/supabase';
+import { supabaseAdmin } from '../utils/supabase';
 import jwt from 'jsonwebtoken';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 export interface AuthResult {
   success: boolean;
   user?: any;
   error?: string;
+}
+
+export interface AuthenticatedRequest extends NextApiRequest {
+  user?: {
+    id: number;
+    email: string;
+    role: string;
+    firstName?: string;
+    lastName?: string;
+  };
 }
 
 export class AuthService {
@@ -68,4 +79,60 @@ export class AuthService {
     // JWT tokens are stateless, so no cleanup needed
     return;
   }
-} 
+
+  // Extract token from request (supports both Bearer token and cookie)
+  static extractToken(req: NextApiRequest): string | null {
+    // Check Authorization header first
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      return authHeader.substring(7);
+    }
+
+    // Check cookies
+    if (req.cookies?.auth_token) {
+      return req.cookies.auth_token;
+    }
+
+    return null;
+  }
+
+  // Verify staff authentication
+  static async verifyStaffAuth(req: NextApiRequest): Promise<AuthResult> {
+    try {
+      const token = this.extractToken(req);
+      if (!token) {
+        return { success: false, error: 'No authentication token provided' };
+      }
+
+      const result = await this.validateAuthToken(token);
+      if (!result.success) {
+        return result;
+      }
+
+      // Verify user still exists and is active
+      const { data: staff, error } = await supabaseAdmin
+        .from('StaffUser')
+        .select('id, email, firstName, lastName, role, isActive')
+        .eq('id', result.user!.id)
+        .single();
+
+      if (error || !staff || !staff.isActive) {
+        return { success: false, error: 'User not found or inactive' };
+      }
+
+      return { 
+        success: true, 
+        user: {
+          id: staff.id,
+          email: staff.email,
+          role: staff.role || 'staff',
+          firstName: staff.firstName,
+          lastName: staff.lastName
+        }
+      };
+    } catch (error) {
+      console.error('Staff auth verification error:', error);
+      return { success: false, error: 'Authentication verification failed' };
+    }
+  }
+}

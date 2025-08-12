@@ -1,16 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../../utils/supabase';
-import { withAuth, withRateLimit } from '../../../../lib/security';
-import { z } from 'zod';
-
-const updateSchema = z.object({
-  type: z.literal('brand'),
-  data: z.object({
-    name: z.string().min(1).max(100),
-    logoUrl: z.string().url().optional().nullable(),
-    isActive: z.boolean().optional(),
-  })
-});
+import { withSecurity } from '../../../../lib/security';
+import { schemas } from '../../../../lib/validation';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -18,7 +9,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   if (req.method === 'PUT') {
     try {
-      const { type, data } = updateSchema.parse(req.body);
+      const { type, data } = req.body;
 
       switch (type) {
         case 'brand':
@@ -79,4 +70,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-export default withAuth(['staff'])(withRateLimit({ windowMs: 60_000, limit: 60, keyPrefix: 'staff:' })(handler));
+// Apply comprehensive security middleware
+export default withSecurity({
+  auth: true, // Require authentication
+  roles: ['staff'], // Only staff can access
+  rateLimit: {
+    windowMs: 60 * 1000, // 1 minute
+    limit: 60, // 60 requests per minute
+    keyPrefix: 'brands:',
+  },
+  cors: true, // Enable CORS
+  sizeLimit: '1mb', // Limit request size
+  validation: {
+    PUT: schemas.brand.create, // Reuse the brand schema for updates
+  },
+  securityHeaders: true, // Enable security headers
+})(handler);

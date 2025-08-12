@@ -1,13 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
-import { withRateLimit } from '../../../lib/security';
-import { z } from 'zod';
-
-const respondSchema = z.object({
-  email: z.string().email(),
-  orderNumber: z.string().min(3),
-  decision: z.enum(['approve', 'decline']),
-});
+import { withSecurity } from '../../../lib/security';
+import { schemas } from '../../../lib/validation';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -15,7 +9,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const { email, orderNumber, decision } = respondSchema.parse(req.body);
+    const { email, orderNumber, decision } = req.body; // Validation handled by middleware
 
     if (!email || !orderNumber || !decision) {
       return res.status(400).json({ error: 'Email, order number and decision are required' });
@@ -114,6 +108,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withRateLimit({ windowMs: 60_000, limit: 30, keyPrefix: 'respond:' })(handler);
+export default withSecurity({
+  auth: false, // Public endpoint but needs security
+  rateLimit: {
+    windowMs: 60 * 1000,
+    limit: 30,
+    keyPrefix: 'respond:',
+  },
+  cors: true,
+  sizeLimit: '1mb',
+  validation: {
+    POST: schemas.order.respond,
+  },
+  securityHeaders: true,
+})(handler);
 
 
