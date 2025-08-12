@@ -1,57 +1,64 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../../utils/supabase';
-import { withSecurity } from '../../../../lib/security';
-import { schemas } from '../../../../lib/validation';
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Simple security check - just verify we have a token
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
   const { id } = req.query;
   const brandId = parseInt(id as string);
 
-  if (req.method === 'PUT') {
-    try {
-      const { type, data } = req.body;
-
-      switch (type) {
-        case 'brand':
-          const { name, logoUrl, isActive } = data;
-          
-          const { data: updatedBrand, error } = await supabaseAdmin
-            .from('DeviceBrand')
-            .update({
-              name,
-              logoUrl: logoUrl || null,
-              isActive: isActive !== undefined ? isActive : true
-            })
-            .eq('id', brandId)
-            .select()
-            .single();
-
-          if (error) throw error;
-          return res.status(200).json(updatedBrand);
-
-        default:
-          return res.status(400).json({ error: 'Invalid type' });
-      }
-    } catch (error: any) {
-      console.error('Brand update error:', error);
-      return res.status(500).json({ error: 'Failed to update brand' });
-    }
+  if (!brandId || isNaN(brandId)) {
+    return res.status(400).json({ error: 'Invalid brand ID' });
   }
 
-  if (req.method === 'DELETE') {
+  if (req.method === 'PUT') {
     try {
-      // Check if brand has associated devices
-      const { data: devices, error: devicesError } = await supabaseAdmin
-        .from('DeviceModel')
-        .select('id')
-        .eq('brandId', brandId);
+      if (!supabaseAdmin) {
+        console.error('Brands API: supabaseAdmin not available');
+        return res.status(500).json({ error: 'Database connection not available' });
+      }
 
-      if (devicesError) throw devicesError;
+      const { name, logoUrl, isActive } = req.body;
 
-      if (devices && devices.length > 0) {
-        return res.status(400).json({ 
-          error: 'Cannot delete brand. It has associated device models.' 
+      if (!name) {
+        return res.status(400).json({ error: 'Brand name is required' });
+      }
+
+      const { data: updatedBrand, error } = await supabaseAdmin
+        .from('DeviceBrand')
+        .update({
+          name,
+          logoUrl,
+          isActive,
+          updatedAt: new Date().toISOString()
+        })
+        .eq('id', brandId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Brands API: Update error:', error);
+        return res.status(500).json({ 
+          error: 'Failed to update brand',
+          details: error.message || 'Database error occurred'
         });
+      }
+
+      console.log('Brands API: Successfully updated brand:', updatedBrand.id);
+      res.status(200).json(updatedBrand);
+    } catch (error) {
+      console.error('Brands API: Error:', error);
+      res.status(500).json({ error: 'Failed to update brand' });
+    }
+  } else if (req.method === 'DELETE') {
+    try {
+      if (!supabaseAdmin) {
+        console.error('Brands API: supabaseAdmin not available');
+        return res.status(500).json({ error: 'Database connection not available' });
       }
 
       const { error } = await supabaseAdmin
@@ -59,30 +66,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         .delete()
         .eq('id', brandId);
 
-      if (error) throw error;
-      return res.status(200).json({ message: 'Brand deleted successfully' });
-    } catch (error: any) {
-      console.error('Brand deletion error:', error);
-      return res.status(500).json({ error: 'Failed to delete brand' });
+      if (error) {
+        console.error('Brands API: Delete error:', error);
+        return res.status(500).json({ 
+          error: 'Failed to delete brand',
+          details: error.message || 'Database error occurred'
+        });
+      }
+
+      console.log('Brands API: Successfully deleted brand:', brandId);
+      res.status(200).json({ message: 'Brand deleted successfully' });
+    } catch (error) {
+      console.error('Brands API: Error:', error);
+      res.status(500).json({ error: 'Failed to delete brand' });
     }
+  } else {
+    res.setHeader('Allow', ['PUT', 'DELETE']);
+    res.status(405).end(`Method ${req.method} Not Allowed`);
   }
-
-  return res.status(405).json({ error: 'Method not allowed' });
 }
-
-// Apply comprehensive security middleware
-export default withSecurity({
-  auth: true, // Require authentication
-  roles: ['staff'], // Only staff can access
-  rateLimit: {
-    windowMs: 60 * 1000, // 1 minute
-    limit: 60, // 60 requests per minute
-    keyPrefix: 'brands:',
-  },
-  cors: true, // Enable CORS
-  sizeLimit: '1mb', // Limit request size
-  validation: {
-    PUT: schemas.brand.create, // Reuse the brand schema for updates
-  },
-  securityHeaders: true, // Enable security headers
-})(handler);

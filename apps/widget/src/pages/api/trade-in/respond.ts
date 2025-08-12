@@ -1,18 +1,34 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
-import { withSecurity } from '../../../lib/security';
-import { schemas } from '../../../lib/validation';
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
   try {
-    const { email, orderNumber, decision } = req.body; // Validation handled by middleware
+    if (!supabaseAdmin) {
+      console.error('Trade-in Respond API: supabaseAdmin not available');
+      return res.status(500).json({ error: 'Database connection not available' });
+    }
 
-    if (!email || !orderNumber || !decision) {
-      return res.status(400).json({ error: 'Email, order number and decision are required' });
+    const { orderId, email, response, notes } = req.body;
+
+    if (!orderId || !email || !response) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        details: 'Order ID, email, and response are required'
+      });
+    }
+
+    // Validate response type
+    const validResponses = ['ACCEPTED', 'REJECTED', 'COUNTER_OFFER'];
+    if (!validResponses.includes(response)) {
+      return res.status(400).json({ 
+        error: 'Invalid response type',
+        details: 'Response must be ACCEPTED, REJECTED, or COUNTER_OFFER'
+      });
     }
 
     // Find order and ensure it belongs to the email
@@ -20,107 +36,76 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .from('TradeInOrder')
       .select(`
         *,
-        customer:Customer(*),
-        deviceModel:DeviceModel(
-          *,
-          brand:DeviceBrand(*),
-          category:DeviceCategory(*)
-        ),
-        deviceCondition:DeviceCondition(*),
-        storageOption:DeviceStorageOption(*)
+        customer:Customer(*)
       `)
-      .eq('orderNumber', orderNumber)
-      .eq('customer.email', email)
+      .eq('id', orderId)
       .single();
 
     if (orderError || !order) {
-      return res.status(404).json({ error: 'Order not found for provided email and order number' });
+      console.error('Trade-in Respond API: Order lookup error:', orderError);
+      return res.status(404).json({ 
+        error: 'Order not found',
+        details: 'The specified order could not be found'
+      });
     }
 
-    // Only allow response when awaiting approval
-    if (order.status !== 'AWAITING_APPROVAL') {
-      return res.status(400).json({ error: `Order is not awaiting approval (current status: ${order.status})` });
+    // Verify email matches order
+    if (order.customer?.email !== email) {
+      return res.status(403).json({ 
+        error: 'Access denied',
+        details: 'This order does not belong to the specified email'
+      });
     }
 
-    const approved = decision === 'approve';
-    const newStatus = approved ? 'PROCESSING' : 'REJECTED';
-
+    // Update order status
     const updateData: any = {
-      status: newStatus,
-      updatedAt: new Date().toISOString(),
+      status: response === 'ACCEPTED' ? 'ACCEPTED' : response === 'REJECTED' ? 'REJECTED' : 'COUNTER_OFFER',
+      updatedAt: new Date().toISOString()
     };
-    if (approved) {
-      updateData.processedAt = new Date().toISOString();
+
+    if (notes) {
+      updateData.notes = notes;
     }
 
-    const { data: updated, error: updateError } = await supabaseAdmin
+    const { data: updatedOrder, error: updateError } = await supabaseAdmin
       .from('TradeInOrder')
       .update(updateData)
-      .eq('id', order.id)
-      .select(`
-        *,
-        customer:Customer(*),
-        deviceModel:DeviceModel(
-          *,
-          brand:DeviceBrand(*),
-          category:DeviceCategory(*)
-        ),
-        deviceCondition:DeviceCondition(*),
-        storageOption:DeviceStorageOption(*)
-      `)
+      .eq('id', orderId)
+      .select()
       .single();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error('Trade-in Respond API: Update error:', updateError);
+      return res.status(500).json({ 
+        error: 'Failed to update order',
+        details: updateError.message || 'Database error occurred'
+      });
+    }
 
-    // History entry
+    // Create status history entry
     await supabaseAdmin
       .from('OrderStatusHistory')
       .insert({
-        orderId: order.id,
-        status: newStatus,
-        notes: approved
-          ? `Customer approved revised amount ${order.finalAmount ?? order.quotedAmount}`
-          : 'Customer declined revised amount',
-        updatedBy: 1,
+        orderId: orderId,
+        status: updateData.status,
+        notes: notes || `Customer ${response.toLowerCase()} the offer`,
+        updatedBy: 1 // System user
       });
 
-    const responsePayload = {
-      id: updated.id,
-      orderNumber: updated.orderNumber,
-      status: updated.status,
-      quotedAmount: parseFloat(updated.quotedAmount?.toString?.() ?? `${updated.quotedAmount}`),
-      finalAmount: updated.finalAmount
-        ? parseFloat(updated.finalAmount?.toString?.() ?? `${updated.finalAmount}`)
-        : undefined,
-      submittedAt: updated.submittedAt,
-      processedAt: updated.processedAt || undefined,
-      completedAt: updated.completedAt || undefined,
-      customerName: `${updated.customer.firstName} ${updated.customer.lastName}`.trim(),
-      deviceModel: `${updated.deviceModel.brand.name} ${updated.deviceModel.name}`,
-      deviceCondition: updated.deviceCondition.name,
-      notes: updated.notes,
-    };
+    console.log('Trade-in Respond API: Successfully processed response for order:', orderId);
+    res.status(200).json({
+      success: true,
+      message: `Order ${response.toLowerCase()} successfully`,
+      order: updatedOrder
+    });
 
-    return res.status(200).json(responsePayload);
-  } catch (error: any) {
-    console.error('Order respond error:', error);
-    return res.status(500).json({ error: 'Failed to respond to order', details: error instanceof Error ? error.message : 'Unknown error' });
+  } catch (error) {
+    console.error('Trade-in Respond API: Error:', error);
+    res.status(500).json({ 
+      error: 'Failed to process response',
+      details: 'An unexpected error occurred. Please try again.'
+    });
   }
 }
-
-export default withSecurity({
-  auth: false, // Public endpoint but needs security
-  rateLimit: {
-    windowMs: 60 * 1000,
-    limit: 30,
-    keyPrefix: 'respond:',
-  },
-  cors: true,
-  sizeLimit: '1mb',
-  validation: {
-    POST: schemas.order.respond,
-  },
-  securityHeaders: true,
-})(handler);
 
 

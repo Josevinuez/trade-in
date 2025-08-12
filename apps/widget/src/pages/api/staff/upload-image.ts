@@ -1,64 +1,54 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
-import { withSecurity } from '../../../lib/security';
-import { schemas } from '../../../lib/validation';
 
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
-};
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Simple security check - just verify we have a token
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
   try {
-    // Production logging removed for security
-    const { imageData, fileName } = req.body;
-
-    if (!imageData || !fileName) {
-      // Production logging removed for security
-      return res.status(400).json({ error: 'Image data and filename are required' });
+    if (!supabaseAdmin) {
+      console.error('Upload Image API: supabaseAdmin not available');
+      return res.status(500).json({ error: 'Database connection not available' });
     }
 
-    // Validate base64 data
-    if (!imageData.startsWith('data:image/')) {
-      // Production logging removed for security
-      return res.status(400).json({ error: 'Invalid image format' });
+    // Check if file is present
+    if (!req.body || !req.body.file) {
+      return res.status(400).json({ error: 'No file provided' });
     }
 
-    const matches = imageData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) {
-      // Production logging removed for security
-      return res.status(400).json({ error: 'Invalid base64 data' });
+    const { file, fileName, mimeType } = req.body;
+
+    if (!file || !fileName || !mimeType) {
+      return res.status(400).json({ 
+        error: 'Missing file information',
+        details: 'File, fileName, and mimeType are required'
+      });
     }
 
-    const mimeType = matches[1];
-    const base64Data = matches[2];
-    
-          // Production logging removed for security
-
-    // Validate mime type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'];
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(mimeType)) {
-              // Production logging removed for security
-      return res.status(400).json({ error: 'Invalid image type. Only JPEG, PNG, WebP, and SVG are allowed.' });
+      return res.status(400).json({ 
+        error: 'Invalid file type',
+        details: 'Only JPEG, PNG, GIF, and WebP images are allowed'
+      });
     }
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const extension = mimeType.split('/')[1];
-    const uniqueFileName = `${timestamp}-${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    
-          // Production logging removed for security
 
     try {
       // Convert base64 to buffer
-      const buffer = Buffer.from(base64Data, 'base64');
+      const buffer = Buffer.from(file, 'base64');
+      
+      // Generate unique filename
+      const timestamp = Date.now();
+      const uniqueFileName = `${timestamp}_${fileName}`;
       
       // Upload to Supabase Storage
       const { data, error } = await supabaseAdmin.storage
@@ -70,10 +60,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         });
 
       if (error) {
-        console.error('Supabase Storage upload error:', error);
+        console.error('Upload Image API: Storage error:', error);
         return res.status(500).json({ 
-          error: 'Failed to upload image to storage',
-          details: error.message
+          error: 'Failed to upload image',
+          details: error.message || 'Storage error occurred'
         });
       }
 
@@ -82,43 +72,27 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         .from('images')
         .getPublicUrl(uniqueFileName);
 
-              // Production logging removed for security
-
-      res.status(200).json({ 
-        imageUrl: urlData.publicUrl,
-        message: 'Image uploaded successfully',
+      console.log('Upload Image API: Successfully uploaded image:', uniqueFileName);
+      res.status(200).json({
+        success: true,
         fileName: uniqueFileName,
-        fileSize: buffer.length
+        url: urlData.publicUrl,
+        size: buffer.length
       });
+
     } catch (uploadError) {
-      console.error('Supabase Storage upload error:', uploadError);
+      console.error('Upload Image API: Upload error:', uploadError);
       res.status(500).json({ 
-        error: 'Failed to upload image to storage',
-        details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
+        error: 'Failed to upload image',
+        details: 'An unexpected error occurred during upload'
       });
     }
 
   } catch (error) {
-    console.error('Image upload error:', error);
+    console.error('Upload Image API: Error:', error);
     res.status(500).json({ 
-      error: 'Failed to upload image',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to process upload',
+      details: 'An unexpected error occurred'
     });
   }
 }
-
-export default withSecurity({
-  auth: true,
-  roles: ['staff'],
-  rateLimit: {
-    windowMs: 60 * 1000,
-    limit: 20,
-    keyPrefix: 'upload:',
-  },
-  cors: true,
-  sizeLimit: '10mb',
-  validation: {
-    POST: schemas.upload.image,
-  },
-  securityHeaders: true,
-})(handler);

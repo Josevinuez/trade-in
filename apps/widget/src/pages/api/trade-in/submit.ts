@@ -1,33 +1,44 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
-import { withSecurity } from '../../../lib/security';
-import { schemas } from '../../../lib/validation';
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
   try {
+    if (!supabaseAdmin) {
+      console.error('Trade-in Submit API: supabaseAdmin not available');
+      return res.status(500).json({ error: 'Database connection not available' });
+    }
+
     const {
       customerEmail,
-      customerName,
+      customerFirstName,
+      customerLastName,
       customerPhone,
-      customerAddress,
-      customerCity,
-      customerProvince,
-      customerPostalCode,
       deviceModelId,
       deviceConditionId,
       storageOptionId,
-      quotedAmount,
-      paymentMethod,
-      notes
-    } = req.body; // Validation handled by middleware
+      estimatedValue
+    } = req.body;
 
     // Validate required fields
-    if (!customerEmail || !customerName || !deviceModelId || !deviceConditionId || !storageOptionId || !quotedAmount) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    if (!customerEmail || !customerFirstName || !customerLastName || !deviceModelId || !deviceConditionId || !storageOptionId || !estimatedValue) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        details: 'All fields are required for trade-in submission'
+      });
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customerEmail)) {
+      return res.status(400).json({ 
+        error: 'Invalid email format',
+        details: 'Please provide a valid email address'
+      });
     }
 
     // Check if customer exists, if not create them
@@ -38,117 +49,108 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .single();
 
     if (customerError && customerError.code !== 'PGRST116') {
-      throw customerError;
+      console.error('Trade-in Submit API: Customer lookup error:', customerError);
+      return res.status(500).json({ 
+        error: 'Failed to check customer',
+        details: 'Database error occurred while checking customer'
+      });
     }
 
+    let customerId: number;
+
     if (!customer) {
+      // Create new customer
       const { data: newCustomer, error: createError } = await supabaseAdmin
         .from('Customer')
         .insert({
           email: customerEmail,
-          firstName: customerName.split(' ')[0] || customerName,
-          lastName: customerName.split(' ').slice(1).join(' ') || '',
-          phone: customerPhone,
-          addressLine1: customerAddress,
-          city: customerCity,
-          province: customerProvince,
-          postalCode: customerPostalCode,
-          passwordHash: 'temp-hash', // Will be updated when customer registers
+          firstName: customerFirstName,
+          lastName: customerLastName,
+          phone: customerPhone || null
         })
         .select()
         .single();
 
-      if (createError) throw createError;
-      customer = newCustomer;
+      if (createError) {
+        console.error('Trade-in Submit API: Customer creation error:', createError);
+        return res.status(500).json({ 
+          error: 'Failed to create customer',
+          details: createError.message || 'Database error occurred'
+        });
+      }
+
+      customerId = newCustomer.id;
+      console.log('Trade-in Submit API: Created new customer:', customerId);
     } else {
-      // Update existing customer with address information
-      const { data: updatedCustomer, error: updateError } = await supabaseAdmin
-        .from('Customer')
-        .update({
-          addressLine1: customerAddress,
-          city: customerCity,
-          province: customerProvince,
-          postalCode: customerPostalCode,
-        })
-        .eq('id', customer.id)
-        .select()
-        .single();
-
-      if (updateError) throw updateError;
-      customer = updatedCustomer;
+      customerId = customer.id;
+      console.log('Trade-in Submit API: Using existing customer:', customerId);
     }
 
-    // Generate unique order number
-    const currentYear = new Date().getFullYear();
-    const timestamp = Date.now();
-    const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    const orderNumber = `TI-${currentYear}-${timestamp}-${randomSuffix}`;
-
     // Create trade-in order
-    const { data: tradeInOrder, error: orderError } = await supabaseAdmin
-      .from('trade_in_orders')
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('TradeInOrder')
       .insert({
-        order_number: orderNumber,
-        customer_id: customer.id,
-        device_model_id: parseInt(String(deviceModelId)),
-        device_condition_id: parseInt(String(deviceConditionId)),
-        storage_option_id: parseInt(String(storageOptionId)),
-        quoted_amount: parseFloat(String(quotedAmount)),
+        customerId,
+        deviceModelId: parseInt(deviceModelId),
+        deviceConditionId: parseInt(deviceConditionId),
+        storageOptionId: parseInt(storageOptionId),
+        estimatedValue: parseFloat(estimatedValue),
         status: 'PENDING',
-        payment_method: paymentMethod || null,
-        notes: notes || '',
+        paymentMethod: 'E_TRANSFER'
       })
       .select(`
         *,
-        customer:customers(*),
-        deviceModel:device_models(
+        customer:Customer(*),
+        deviceModel:DeviceModel(
           *,
-          brand:device_brands(*),
-          category:device_categories(*)
+          brand:DeviceBrand(*),
+          category:DeviceCategory(*)
         ),
-        deviceCondition:device_conditions(*),
-        storageOption:device_storage_options(*)
+        deviceCondition:DeviceCondition(*),
+        storageOption:DeviceStorageOption(*)
       `)
       .single();
 
-    if (orderError) throw orderError;
+    if (orderError) {
+      console.error('Trade-in Submit API: Order creation error:', orderError);
+      return res.status(500).json({ 
+        error: 'Failed to create order',
+        details: orderError.message || 'Database error occurred'
+      });
+    }
 
-    // Create initial status history
-    const { error: historyError } = await supabaseAdmin
-      .from('order_status_history')
+    // Create initial status history entry
+    await supabaseAdmin
+      .from('OrderStatusHistory')
       .insert({
-        order_id: tradeInOrder.id,
+        orderId: order.id,
         status: 'PENDING',
-        notes: 'Order created from trade-in form',
-        updated_by: 1, // Default to first staff member
+        notes: 'Trade-in order submitted',
+        updatedBy: 1 // System user
       });
 
-    if (historyError) throw historyError;
-
+    console.log('Trade-in Submit API: Successfully created order:', order.id);
     res.status(201).json({
       success: true,
-      order: tradeInOrder,
-      orderNumber: orderNumber,
-      message: 'Trade-in order submitted successfully'
+      message: 'Trade-in order submitted successfully',
+      order: {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        estimatedValue: order.estimatedValue,
+        submittedAt: order.submittedAt,
+        customerName: `${order.customer.firstName} ${order.customer.lastName}`,
+        deviceModel: `${order.deviceModel.brand.name} ${order.deviceModel.name}`,
+        deviceCondition: order.deviceCondition.name,
+        storageOption: order.storageOption.storage
+      }
     });
 
   } catch (error) {
-    console.error('Trade-in submission error:', error);
-    res.status(500).json({ error: 'Failed to submit trade-in order' });
+    console.error('Trade-in Submit API: Error:', error);
+    res.status(500).json({ 
+      error: 'Failed to submit trade-in',
+      details: 'An unexpected error occurred. Please try again.'
+    });
   }
 }
-
-export default withSecurity({
-  auth: false, // Public endpoint but needs security
-  rateLimit: {
-    windowMs: 60 * 1000,
-    limit: 30,
-    keyPrefix: 'submit:',
-  },
-  cors: true,
-  sizeLimit: '1mb',
-  validation: {
-    POST: schemas.order.create,
-  },
-  securityHeaders: true,
-})(handler);

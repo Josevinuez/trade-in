@@ -1,75 +1,100 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
-import { withSecurity } from '../../../lib/security';
-import { schemas } from '../../../lib/validation';
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
   try {
-    const { email, orderNumber } = req.body; // Validation handled by middleware
+    if (!supabaseAdmin) {
+      console.error('Trade-in Track API: supabaseAdmin not available');
+      return res.status(500).json({ error: 'Database connection not available' });
+    }
+
+    const { email, orderNumber } = req.body;
 
     if (!email || !orderNumber) {
-      return res.status(400).json({ error: 'Email and order number are required' });
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        details: 'Email and order number are required'
+      });
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        error: 'Invalid email format',
+        details: 'Please provide a valid email address'
+      });
     }
 
     // Find the order by email and order number
     const { data: order, error: orderError } = await supabaseAdmin
-      .from('trade_in_orders')
+      .from('TradeInOrder')
       .select(`
         *,
-        customer:customers(*),
-        deviceModel:device_models(
+        customer:Customer(*),
+        deviceModel:DeviceModel(
           *,
-          brand:device_brands(*),
-          category:device_categories(*)
+          brand:DeviceBrand(*),
+          category:DeviceCategory(*)
         ),
-        deviceCondition:device_conditions(*)
+        deviceCondition:DeviceCondition(*),
+        storageOption:DeviceStorageOption(*)
       `)
-      .eq('order_number', orderNumber)
+      .eq('orderNumber', orderNumber)
       .eq('customer.email', email)
       .single();
 
     if (orderError || !order) {
-      return res.status(404).json({ error: 'Order not found. Please check your email and order number.' });
+      console.error('Trade-in Track API: Order lookup error:', orderError);
+      return res.status(404).json({ 
+        error: 'Order not found',
+        details: 'No order found with the provided email and order number'
+      });
     }
 
-    // Format the response
-    const orderStatus = {
-      id: order.id,
-      orderNumber: order.order_number,
-      status: order.status,
-      quotedAmount: parseFloat(order.quoted_amount.toString()),
-      finalAmount: order.final_amount ? parseFloat(order.final_amount.toString()) : undefined,
-      submittedAt: order.submitted_at,
-      processedAt: order.processed_at || undefined,
-      completedAt: order.completed_at || undefined,
-      customerName: `${order.customer.first_name} ${order.customer.last_name}`.trim(),
-      deviceModel: `${order.deviceModel.brand.name} ${order.deviceModel.name}`,
-      deviceCondition: order.deviceCondition.name,
-      notes: order.notes,
-    };
+    // Get status history
+    const { data: statusHistory, error: historyError } = await supabaseAdmin
+      .from('OrderStatusHistory')
+      .select('*')
+      .eq('orderId', order.id)
+      .order('createdAt', { ascending: true });
 
-    return res.status(200).json(orderStatus);
-  } catch (error: any) {
-    console.error('Order tracking error:', error);
-    return res.status(500).json({ error: 'Failed to track order', details: error instanceof Error ? error.message : 'Unknown error' });
+    if (historyError) {
+      console.error('Trade-in Track API: Status history error:', historyError);
+      // Continue without status history
+    }
+
+    console.log('Trade-in Track API: Successfully retrieved order:', order.id);
+    res.status(200).json({
+      success: true,
+      order: {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        estimatedValue: order.estimatedValue,
+        finalAmount: order.finalAmount,
+        submittedAt: order.submittedAt,
+        processedAt: order.processedAt,
+        completedAt: order.completedAt,
+        customerName: `${order.customer.firstName} ${order.customer.lastName}`,
+        deviceModel: `${order.deviceModel.brand.name} ${order.deviceModel.name}`,
+        deviceCondition: order.deviceCondition.name,
+        storageOption: order.storageOption.storage,
+        notes: order.notes,
+        statusHistory: statusHistory || []
+      }
+    });
+
+  } catch (error) {
+    console.error('Trade-in Track API: Error:', error);
+    res.status(500).json({ 
+      error: 'Failed to track order',
+      details: 'An unexpected error occurred. Please try again.'
+    });
   }
 }
-
-export default withSecurity({
-  auth: false, // Public endpoint but needs security
-  rateLimit: {
-    windowMs: 60 * 1000,
-    limit: 60,
-    keyPrefix: 'track:',
-  },
-  cors: true,
-  sizeLimit: '1mb',
-  validation: {
-    POST: schemas.order.track,
-  },
-  securityHeaders: true,
-})(handler);

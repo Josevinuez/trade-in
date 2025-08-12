@@ -1,39 +1,38 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../utils/supabase';
-import { withSecurity } from '../../../lib/security';
 
-export default withSecurity({
-  auth: false, // Public endpoint but needs security
-  rateLimit: {
-    windowMs: 60 * 1000,
-    limit: 100,
-    keyPrefix: 'conditions:',
-  },
-  cors: true,
-  sizeLimit: '1mb',
-  securityHeaders: true,
-})(handler);
-
-async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Simple security check - just verify we have a token
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required' });
   }
 
-  try {
-    const { data: conditions, error } = await supabaseAdmin
-      .from('DeviceCondition')
-      .select('*')
-      .eq('isActive', true)
-      .order('name', { ascending: true });
+  if (req.method === 'GET') {
+    try {
+      if (!supabaseAdmin) {
+        console.error('Device Conditions API: supabaseAdmin not available');
+        return res.status(500).json({ error: 'Database connection not available' });
+      }
 
-    if (error) throw error;
+      const { data: conditions, error } = await supabaseAdmin
+        .from('DeviceCondition')
+        .select('*')
+        .eq('isActive', true)
+        .order('name', { ascending: true });
 
-    res.status(200).json({
-      conditions
-    });
+      if (error) {
+        console.error('Device Conditions API: Error:', error);
+        return res.status(500).json({ error: 'Failed to fetch conditions' });
+      }
 
-  } catch (error) {
-    console.error('Device conditions error:', error);
-    res.status(500).json({ error: 'Failed to fetch device conditions' });
+      res.status(200).json(conditions);
+    } catch (error) {
+      console.error('Device Conditions API: Error:', error);
+      res.status(500).json({ error: 'Failed to fetch conditions' });
+    }
+  } else {
+    res.setHeader('Allow', ['GET']);
+    res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 } 
