@@ -117,18 +117,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (error) {
         console.error('Upload Image API: Storage error:', error);
-        console.error('Upload Image API: Error code:', error.statusCode);
         console.error('Upload Image API: Error message:', error.message);
         console.error('Upload Image API: Tried buckets: images, uploads, public');
         
-        // Handle specific storage errors
-        if (error.statusCode === 404) {
+        // Handle specific storage errors based on error message content
+        if (error.message?.includes('not found') || error.message?.includes('does not exist')) {
           return res.status(500).json({ 
             error: 'Storage bucket not found',
             details: 'None of the storage buckets (images, uploads, public) exist. Please create at least one in your Supabase dashboard.',
             suggestion: 'Go to Storage > Create bucket named "images" or "uploads"'
           });
-        } else if (error.statusCode === 403) {
+        } else if (error.message?.includes('access denied') || error.message?.includes('permission')) {
           return res.status(500).json({ 
             error: 'Storage access denied',
             details: 'Access to storage buckets is denied. Check your Supabase storage policies.',

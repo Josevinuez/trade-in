@@ -6,7 +6,7 @@ interface OrderStatus {
   id: number;
   orderNumber: string;
   status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED' | 'AWAITING_APPROVAL' | 'REJECTED';
-  quotedAmount: number;
+  estimatedValue: number;
   finalAmount?: number;
   submittedAt: string;
   processedAt?: string;
@@ -311,7 +311,7 @@ export default function TrackOrder() {
               <p className="text-sm text-gray-600 mb-4">We reviewed your device and updated the offer. Please approve or decline.</p>
               <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4 mb-4">
                 <span className="text-gray-700">Proposed Final Amount</span>
-                <span className="font-semibold text-green-700">${(order.finalAmount ?? order.quotedAmount).toFixed(2)}</span>
+                <span className="font-semibold text-green-700">${(order.finalAmount ?? order.estimatedValue).toFixed(2)}</span>
               </div>
               <div className="flex gap-3">
                 <button
