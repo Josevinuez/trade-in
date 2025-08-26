@@ -405,6 +405,280 @@ export default function StaffDeviceManagement() {
     }
   };
 
+  const handleExportCSV = () => {
+    try {
+      // Create CSV content
+      const csvHeaders = [
+        'Device Name',
+        'Model Number',
+        'Release Year',
+        'Category',
+        'Brand',
+        'Display Order',
+        'Storage Options',
+        'Excellent Price',
+        'Good Price',
+        'Fair Price',
+        'Poor Price'
+      ];
+
+      const csvRows = devices.map(device => {
+        const baseRow = [
+          device.name,
+          device.modelNumber,
+          device.releaseYear.toString(),
+          device.category.name,
+          device.brand.name,
+          device.displayOrder.toString(),
+        ];
+
+        // Add storage options if they exist
+        if (device.storageOptions && device.storageOptions.length > 0) {
+          return device.storageOptions.map(storage => [
+            ...baseRow,
+            storage.storage,
+            storage.excellentPrice?.toString() || '',
+            storage.goodPrice?.toString() || '',
+            storage.fairPrice?.toString() || '',
+            storage.poorPrice?.toString() || ''
+          ]);
+        } else {
+          return [baseRow.concat(['', '', '', '', ''])];
+        }
+      }).flat();
+
+      // Create CSV content
+      const csvContent = [csvHeaders, ...csvRows]
+        .map(row => row.map(field => `"${field}"`).join(','))
+        .join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `devices-export-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      alert('CSV exported successfully!');
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      alert('Failed to export CSV. Please try again.');
+    }
+  };
+
+  const handleCSVImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n');
+      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+      
+      // Validate headers
+      const requiredHeaders = [
+        'Device Name',
+        'Model Number',
+        'Release Year',
+        'Category',
+        'Brand',
+        'Storage Options',
+        'Excellent Price',
+        'Good Price',
+        'Fair Price',
+        'Poor Price'
+      ];
+
+      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+      if (missingHeaders.length > 0) {
+        alert(`Invalid CSV format. Missing required headers: ${missingHeaders.join(', ')}`);
+        return;
+      }
+
+      const devicesToImport = [];
+      let currentDevice: any = null;
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+
+        const values = line.split(',').map(v => v.replace(/"/g, '').trim());
+        const deviceName = values[headers.indexOf('Device Name')];
+        const modelNumber = values[headers.indexOf('Model Number')];
+        const releaseYear = values[headers.indexOf('Release Year')];
+        const categoryName = values[headers.indexOf('Category')];
+        const brandName = values[headers.indexOf('Brand')];
+        const storage = values[headers.indexOf('Storage Options')];
+        const excellentPrice = values[headers.indexOf('Excellent Price')];
+        const goodPrice = values[headers.indexOf('Good Price')];
+        const fairPrice = values[headers.indexOf('Fair Price')];
+        const poorPrice = values[headers.indexOf('Poor Price')];
+
+        if (deviceName && modelNumber && releaseYear && categoryName && brandName) {
+          // Find category and brand IDs
+          const category = categories.find(c => c.name.toLowerCase() === categoryName.toLowerCase());
+          const brand = brands.find(b => b.name.toLowerCase() === brandName.toLowerCase());
+
+          if (!category || !brand) {
+            alert(`Category "${categoryName}" or Brand "${brandName}" not found. Please add them first.`);
+            return;
+          }
+
+          if (currentDevice && currentDevice.name === deviceName) {
+            // Add storage option to existing device
+            if (storage && excellentPrice && goodPrice && fairPrice && poorPrice) {
+              currentDevice.storageOptions.push({
+                storage,
+                excellentPrice: parseFloat(excellentPrice),
+                goodPrice: parseFloat(goodPrice),
+                fairPrice: parseFloat(fairPrice),
+                poorPrice: parseFloat(poorPrice)
+              });
+            }
+          } else {
+            // Create new device
+            if (currentDevice) {
+              devicesToImport.push(currentDevice);
+            }
+            currentDevice = {
+              name: deviceName,
+              modelNumber,
+              releaseYear: parseInt(releaseYear),
+              categoryId: category.id,
+              brandId: brand.id,
+              displayOrder: 0,
+              storageOptions: []
+            };
+            if (storage && excellentPrice && goodPrice && fairPrice && poorPrice) {
+              currentDevice.storageOptions.push({
+                storage,
+                excellentPrice: parseFloat(excellentPrice),
+                goodPrice: parseFloat(goodPrice),
+                fairPrice: parseFloat(fairPrice),
+                poorPrice: parseFloat(poorPrice)
+              });
+            }
+          }
+        }
+      }
+
+      // Add the last device
+      if (currentDevice) {
+        devicesToImport.push(currentDevice);
+      }
+
+      if (devicesToImport.length === 0) {
+        alert('No valid devices found in CSV file.');
+        return;
+      }
+
+      // Confirm import
+      if (!confirm(`Import ${devicesToImport.length} device(s) with their storage options?`)) {
+        return;
+      }
+
+      // Import devices
+      const token = localStorage.getItem('staffAuthToken');
+      if (!token) {
+        alert('Authentication required. Please log in again.');
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const device of devicesToImport) {
+        try {
+          const response = await fetch('/api/staff/devices', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              type: 'model',
+              data: device,
+              storageOptions: device.storageOptions
+            }),
+          });
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            errorCount++;
+            console.error(`Failed to import device ${device.name}:`, await response.text());
+          }
+        } catch (error) {
+          errorCount++;
+          console.error(`Error importing device ${device.name}:`, error);
+        }
+      }
+
+      alert(`Import completed!\n\nSuccessfully imported: ${successCount} device(s)\nFailed to import: ${errorCount} device(s)`);
+      
+      // Refresh data and reset file input
+      fetchData();
+      event.target.value = '';
+      
+    } catch (error) {
+      console.error('Error importing CSV:', error);
+      alert('Failed to import CSV. Please check the file format and try again.');
+    }
+  };
+
+  const handleDownloadTemplate = () => {
+    try {
+      // Create sample CSV template
+      const templateHeaders = [
+        'Device Name',
+        'Model Number',
+        'Release Year',
+        'Category',
+        'Brand',
+        'Storage Options',
+        'Excellent Price',
+        'Good Price',
+        'Fair Price',
+        'Poor Price'
+      ];
+
+      const templateRows = [
+        ['iPhone 15 Pro', 'A3102', '2023', 'Smartphones', 'Apple', '128GB', '800.00', '700.00', '600.00', '500.00'],
+        ['iPhone 15 Pro', 'A3102', '2023', 'Smartphones', 'Apple', '256GB', '900.00', '800.00', '700.00', '600.00'],
+        ['iPhone 15 Pro', 'A3102', '2023', 'Smartphones', 'Apple', '512GB', '1000.00', '900.00', '800.00', '700.00'],
+        ['iPad Pro', 'A2893', '2023', 'Tablets', 'Apple', '128GB', '600.00', '500.00', '400.00', '300.00'],
+        ['iPad Pro', 'A2893', '2023', 'Tablets', 'Apple', '256GB', '700.00', '600.00', '500.00', '400.00']
+      ];
+
+      // Create CSV content
+      const csvContent = [templateHeaders, ...templateRows]
+        .map(row => row.map(field => `"${field}"`).join(','))
+        .join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'devices-import-template.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      alert('CSV template downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading template:', error);
+      alert('Failed to download template. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
@@ -428,10 +702,42 @@ export default function StaffDeviceManagement() {
             <Button variant="outline" onClick={() => router.push('/staff-dashboard')}>
               Back to Dashboard
             </Button>
+            <Button variant="outline" onClick={handleExportCSV}>
+              <ArrowDown className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button variant="outline" onClick={handleDownloadTemplate}>
+              <ArrowDown className="w-4 h-4 mr-2" />
+              Template
+            </Button>
+            <Button variant="outline" onClick={() => document.getElementById('csvFileInput')?.click()}>
+              <Upload className="w-4 h-4 mr-2" />
+              Import CSV
+            </Button>
             <Button onClick={() => setShowAddForm(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add Device
             </Button>
+          </div>
+        </div>
+
+        {/* Hidden CSV file input */}
+        <input
+          id="csvFileInput"
+          type="file"
+          accept=".csv"
+          onChange={handleCSVImport}
+          style={{ display: 'none' }}
+        />
+
+        {/* CSV Import/Export Info */}
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="text-lg font-semibold text-blue-900 mb-2">📊 CSV Import/Export</h3>
+          <div className="text-sm text-blue-800 space-y-1">
+            <p><strong>Export:</strong> Download all devices with their storage options and pricing</p>
+            <p><strong>Template:</strong> Download a sample CSV file to understand the required format</p>
+            <p><strong>Import:</strong> Upload a CSV file to bulk add devices with storage options</p>
+            <p className="text-xs mt-2"><em>Note: Categories and brands must exist before importing devices</em></p>
           </div>
         </div>
 
