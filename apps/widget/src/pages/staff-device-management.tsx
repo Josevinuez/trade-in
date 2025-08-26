@@ -106,24 +106,47 @@ export default function StaffDeviceManagement() {
 
   const fetchData = async () => {
     try {
-      const [devicesRes, categoriesRes, brandsRes, conditionsRes] = await Promise.all([
-        fetch('/api/staff/devices?type=models'),
-        fetch('/api/staff/devices?type=categories'),
-        fetch('/api/staff/devices?type=brands'),
-        fetch('/api/staff/devices?type=conditions'),
+      setLoading(true);
+      
+      // Get authentication token
+      const token = localStorage.getItem('staffAuthToken');
+      if (!token) {
+        alert('Authentication required. Please log in again.');
+        router.push('/staff-login');
+        return;
+      }
+
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const [categoriesRes, brandsRes, conditionsRes, modelsRes] = await Promise.all([
+        fetch('/api/staff/devices?type=categories', { headers }),
+        fetch('/api/staff/devices?type=brands', { headers }),
+        fetch('/api/staff/devices?type=conditions', { headers }),
+        fetch('/api/staff/devices?type=models', { headers })
       ]);
 
-      const devicesData = await devicesRes.json();
-      const categoriesData = await categoriesRes.json();
-      const brandsData = await brandsRes.json();
-      const conditionsData = await conditionsRes.json();
-
-      setDevices(devicesData);
-      setCategories(categoriesData);
-      setBrands(brandsData);
-      setConditions(conditionsData);
+      if (categoriesRes.ok) {
+        const categoriesData = await categoriesRes.json();
+        setCategories(categoriesData);
+      }
+      if (brandsRes.ok) {
+        const brandsData = await brandsRes.json();
+        setBrands(brandsData);
+      }
+      if (conditionsRes.ok) {
+        const conditionsData = await conditionsRes.json();
+        setConditions(conditionsData);
+      }
+      if (modelsRes.ok) {
+        const modelsData = await modelsRes.json();
+        setDevices(modelsData);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
+      alert('Failed to fetch data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -132,24 +155,54 @@ export default function StaffDeviceManagement() {
   const handleImageUpload = async (file: File) => {
     setUploadingImage(true);
     try {
-      const formData = new FormData();
-      formData.append('image', file);
-
-      const response = await fetch('/api/staff/upload-image', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setFormData(prev => ({ ...prev, imageUrl: result.imageUrl }));
-      } else {
-        alert('Failed to upload image');
+      // Get authentication token
+      const token = localStorage.getItem('staffAuthToken');
+      if (!token) {
+        alert('Authentication required. Please log in again.');
+        router.push('/staff-login');
+        return;
       }
+
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64Data = reader.result as string;
+          const base64String = base64Data.split(',')[1]; // Remove data:image/...;base64, prefix
+          
+          const response = await fetch('/api/staff/upload-image', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              file: base64String,
+              fileName: file.name,
+              mimeType: file.type
+            })
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            setFormData(prev => ({ ...prev, imageUrl: result.url }));
+            alert('Image uploaded successfully!');
+          } else {
+            const errorData = await response.json();
+            alert(`Failed to upload image: ${errorData.error || 'Unknown error'}`);
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          alert('Failed to upload image. Please try again.');
+        } finally {
+          setUploadingImage(false);
+        }
+      };
+      
+      reader.readAsDataURL(file);
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload image');
-    } finally {
+      alert('Failed to upload image. Please try again.');
       setUploadingImage(false);
     }
   };
@@ -184,9 +237,20 @@ export default function StaffDeviceManagement() {
 
   const handleAddDevice = async () => {
     try {
+      // Get authentication token
+      const token = localStorage.getItem('staffAuthToken');
+      if (!token) {
+        alert('Authentication required. Please log in again.');
+        router.push('/staff-login');
+        return;
+      }
+
       const response = await fetch('/api/staff/devices', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           type: 'model',
           data: formData,
@@ -203,12 +267,17 @@ export default function StaffDeviceManagement() {
       });
 
       if (response.ok) {
+        alert('Device added successfully!');
         setShowAddForm(false);
         resetForm();
         fetchData();
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to add device: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error adding device:', error);
+      alert('Failed to add device. Please try again.');
     }
   };
 
@@ -216,9 +285,20 @@ export default function StaffDeviceManagement() {
     if (!editingDevice) return;
 
     try {
+      // Get authentication token
+      const token = localStorage.getItem('staffAuthToken');
+      if (!token) {
+        alert('Authentication required. Please log in again.');
+        router.push('/staff-login');
+        return;
+      }
+
       const response = await fetch(`/api/staff/devices/${editingDevice.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           type: 'model',
           data: formData,
@@ -235,12 +315,17 @@ export default function StaffDeviceManagement() {
       });
 
       if (response.ok) {
+        alert('Device updated successfully!');
         setEditingDevice(null);
         resetForm();
         fetchData();
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to update device: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error updating device:', error);
+      alert('Failed to update device. Please try again.');
     }
   };
 
@@ -248,15 +333,46 @@ export default function StaffDeviceManagement() {
     if (!confirm('Are you sure you want to delete this device?')) return;
 
     try {
-      const response = await fetch(`/api/staff/devices/${deviceId}`, {
+      // Get authentication headers
+      const token = localStorage.getItem('staffAuthToken');
+      if (!token) {
+        alert('Authentication required. Please log in again.');
+        router.push('/staff-login');
+        return;
+      }
+
+      const response = await fetch(`/api/staff/devices?id=${deviceId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (response.ok) {
+        alert('Device deleted successfully');
         fetchData();
+      } else {
+        const errorData = await response.json();
+        
+        // Handle specific case where device has orders
+        if (errorData.error === 'Cannot delete device' && errorData.orderCount > 0) {
+          const orderList = errorData.orders?.map((order: any) => 
+            `• ${order.orderNumber} (${order.status})`
+          ).join('\n') || '• Unknown orders';
+          
+          alert(`Cannot Delete Device\n\nThis device has ${errorData.orderCount} order(s) and cannot be deleted.\n\nOrders:\n${orderList}\n\nTo delete this device, you must first:\n1. Delete all associated orders, OR\n2. Reassign the orders to another device\n\n${errorData.suggestion}`);
+        } else if (errorData.error === 'Cannot delete device' && errorData.details) {
+          alert(`Cannot Delete Device\n\n${errorData.details}\n\n${errorData.suggestion || ''}`);
+        } else if (errorData.error === 'Device not found') {
+          alert(`Device Not Found\n\n${errorData.details}\n\n${errorData.suggestion || ''}`);
+        } else {
+          alert(`Failed to delete device: ${errorData.error || 'Unknown error'}`);
+        }
       }
     } catch (error) {
       console.error('Error deleting device:', error);
+      alert('Failed to delete device. Please try again.');
     }
   };
 

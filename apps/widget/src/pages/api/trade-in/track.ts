@@ -69,14 +69,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Continue without status history
     }
 
-    console.log('Trade-in Track API: Successfully retrieved order:', order.id);
+    // Ensure status is always present with a default value
+    const orderStatus = order.status || 'PENDING';
+    
+    console.log('Trade-in Track API: Successfully retrieved order:', order.id, 'with status:', orderStatus);
+    console.log('Trade-in Track API: Full order data:', order);
+    
     res.status(200).json({
       success: true,
       order: {
         id: order.id,
         orderNumber: order.orderNumber,
-        status: order.status,
-        estimatedValue: order.estimatedValue,
+        status: orderStatus,
+        estimatedValue: order.quotedAmount || order.estimatedValue,
         finalAmount: order.finalAmount,
         submittedAt: order.submittedAt,
         processedAt: order.processedAt,
@@ -84,7 +89,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         customerName: `${order.customer.firstName} ${order.customer.lastName}`,
         deviceModel: `${order.deviceModel.brand.name} ${order.deviceModel.name}`,
         deviceCondition: order.deviceCondition.name,
-        storageOption: order.storageOption.storage,
+        storageOption: order.storageOption?.storage || 'Unknown',
         notes: order.notes,
         statusHistory: statusHistory || []
       }

@@ -22,19 +22,64 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(500).json({ error: 'Database connection not available' });
       }
 
-      const { name, logoUrl, isActive } = req.body;
+      const { data: brandData, type } = req.body;
+      
+      console.log('Brands API: Received request body:', req.body);
+      
+      if (!brandData) {
+        return res.status(400).json({ 
+          error: 'Brand data is required',
+          details: 'The request body must contain a "data" field with brand information',
+          suggestion: 'Check the request format and ensure brand data is properly structured'
+        });
+      }
+
+      const { name, logoUrl, isActive } = brandData;
+
+      console.log('Brands API: Updating brand with data:', { name, logoUrl, isActive });
 
       if (!name) {
         return res.status(400).json({ error: 'Brand name is required' });
+      }
+
+      // Validate that the brand exists before updating
+      const { data: existingBrand, error: checkError } = await supabaseAdmin
+        .from('DeviceBrand')
+        .select('id, name')
+        .eq('id', brandId)
+        .single();
+
+      if (checkError) {
+        if (checkError.code === 'PGRST116') {
+          return res.status(404).json({ 
+            error: 'Brand not found',
+            details: 'The brand you are trying to update does not exist',
+            suggestion: 'The brand may have already been deleted or the ID is incorrect'
+          });
+        } else {
+          console.error('Brands API: Error checking brand existence:', checkError);
+          return res.status(500).json({ 
+            error: 'Failed to verify brand',
+            details: checkError.message || 'Database error occurred',
+            suggestion: 'Please try again or contact support'
+          });
+        }
+      }
+
+      if (!existingBrand) {
+        return res.status(404).json({ 
+          error: 'Brand not found',
+          details: 'The brand you are trying to update does not exist',
+          suggestion: 'Refresh the brand list and try again'
+        });
       }
 
       const { data: updatedBrand, error } = await supabaseAdmin
         .from('DeviceBrand')
         .update({
           name,
-          logoUrl,
-          isActive,
-          updatedAt: new Date().toISOString()
+          logoUrl: logoUrl || null,
+          isActive: isActive !== undefined ? isActive : true
         })
         .eq('id', brandId)
         .select()
@@ -42,13 +87,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (error) {
         console.error('Brands API: Update error:', error);
-        return res.status(500).json({ 
-          error: 'Failed to update brand',
-          details: error.message || 'Database error occurred'
-        });
+        console.error('Brands API: Error code:', error.code);
+        console.error('Brands API: Error message:', error.message);
+        
+        // Handle specific database errors
+        if (error.code === '23505') {
+          return res.status(400).json({ 
+            error: 'Brand name already exists',
+            details: 'A brand with this name already exists',
+            suggestion: 'Choose a different name for this brand'
+          });
+        } else if (error.code === '23503') {
+          return res.status(400).json({ 
+            error: 'Cannot update brand',
+            details: 'This brand is referenced by other records and cannot be updated',
+            suggestion: 'Remove all references to this brand before updating'
+          });
+        } else {
+          return res.status(500).json({ 
+            error: 'Failed to update brand',
+            details: error.message || 'Database error occurred',
+            suggestion: 'Please try again or contact support if the problem persists'
+          });
+        }
       }
 
       console.log('Brands API: Successfully updated brand:', updatedBrand.id);
+      console.log('Brands API: Updated data:', { name: updatedBrand.name, logoUrl: updatedBrand.logoUrl, isActive: updatedBrand.isActive });
       res.status(200).json(updatedBrand);
     } catch (error) {
       console.error('Brands API: Error:', error);

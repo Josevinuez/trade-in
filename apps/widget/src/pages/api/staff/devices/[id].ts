@@ -82,7 +82,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   .insert({
                     deviceModelId: deviceId,
                     storage: option.storage,
-                    price: parseFloat(option.price || '0'),
+                    excellentPrice: parseFloat(option.excellentPrice || '0'),
+                    goodPrice: parseFloat(option.goodPrice || '0'),
+                    fairPrice: parseFloat(option.fairPrice || '0'),
+                    poorPrice: parseFloat(option.poorPrice || '0'),
                     isActive: true,
                   })
                   .select()

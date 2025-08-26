@@ -45,7 +45,13 @@ export default function TrackOrder() {
 
       if (response.ok) {
         const data = await response.json();
-        setOrder(data);
+        console.log('Track Order API Response:', data);
+        if (data.success && data.order) {
+          console.log('Setting order data:', data.order);
+          setOrder(data.order);
+        } else {
+          setError('Invalid response format from server');
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to find order');
@@ -95,14 +101,20 @@ export default function TrackOrder() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-CA', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString('en-CA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return 'Invalid Date';
+    }
   };
 
   return (
@@ -196,9 +208,9 @@ export default function TrackOrder() {
             <div className="bg-white rounded-2xl shadow-xl p-8">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Order Status</h2>
-                <div className={`flex items-center px-3 py-1 rounded-full border ${getStatusColor(order.status)}`}>
-                  {getStatusIcon(order.status)}
-                  <span className="ml-2 font-medium capitalize">{order.status.toLowerCase()}</span>
+                <div className={`flex items-center px-3 py-1 rounded-full border ${getStatusColor(order.status || 'PENDING')}`}>
+                  {getStatusIcon(order.status || 'PENDING')}
+                  <span className="ml-2 font-medium capitalize">{(order.status || 'PENDING').toLowerCase()}</span>
                 </div>
               </div>
 
@@ -210,19 +222,19 @@ export default function TrackOrder() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Order Number:</span>
-                        <span className="font-medium">{order.orderNumber}</span>
+                        <span className="font-medium">{order.orderNumber || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Customer:</span>
-                        <span className="font-medium">{order.customerName}</span>
+                        <span className="font-medium">{order.customerName || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Device:</span>
-                        <span className="font-medium">{order.deviceModel}</span>
+                        <span className="font-medium">{order.deviceModel || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Condition:</span>
-                        <span className="font-medium capitalize">{order.deviceCondition.replace('-', ' ')}</span>
+                        <span className="font-medium capitalize">{(order.deviceCondition || 'Unknown').replace('-', ' ')}</span>
                       </div>
                     </div>
                   </div>
@@ -235,9 +247,9 @@ export default function TrackOrder() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Quoted Amount:</span>
-                        <span className="font-medium text-green-600">${order.quotedAmount.toFixed(2)}</span>
+                        <span className="font-medium text-green-600">${(order.estimatedValue || 0).toFixed(2)}</span>
                       </div>
-                      {order.finalAmount !== undefined && (
+                      {order.finalAmount !== undefined && order.finalAmount !== null && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Final Amount:</span>
                           <span className="font-medium text-green-600">${order.finalAmount.toFixed(2)}</span>

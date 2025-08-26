@@ -245,7 +245,8 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
         },
         body: JSON.stringify({
           customerEmail: customerInfo.email,
-          customerName: `${customerInfo.firstName} ${customerInfo.familyName}`,
+          customerFirstName: customerInfo.firstName,
+          customerLastName: customerInfo.familyName,
           customerPhone: customerInfo.phone,
           customerAddress: customerInfo.address,
           customerCity: customerInfo.city,
@@ -254,15 +255,13 @@ export function DeviceBuybackWidget({ showForm = false, setShowForm }: DeviceBuy
           deviceModelId: selectedDeviceModel?.id,
           deviceConditionId: selectedCondition?.id,
           storageOptionId: selectedStorageOption.id,
-          quotedAmount: quoteAmount,
-          paymentMethod: customerInfo.paymentMethod,
-          notes: `Shipping label: ${customerInfo.shippingLabel}`,
+          estimatedValue: quoteAmount,
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        setOrderNumber(data.orderNumber);
+        setOrderNumber(data.order.orderNumber);
         setShowSuccess(true);
         // Reset form
         setCurrentStep('type');

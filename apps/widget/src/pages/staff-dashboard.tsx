@@ -385,7 +385,21 @@ export default function StaffDashboard() {
           } else {
             const errorData = await response.json();
             console.error('Upload failed:', errorData);
-            showNotificationModal('error', 'Error', `Failed to upload image: ${errorData.error || 'Unknown error'}`);
+            
+            // Handle specific error cases
+            if (errorData.error === 'Storage bucket not found') {
+              showNotificationModal('error', 'Storage Error', `${errorData.details}\n\n${errorData.suggestion}`);
+            } else if (errorData.error === 'Storage access denied') {
+              showNotificationModal('error', 'Access Denied', `${errorData.details}\n\n${errorData.suggestion}`);
+            } else if (errorData.error === 'Invalid file type') {
+              showNotificationModal('error', 'Invalid File Type', `${errorData.details}\n\n${errorData.suggestion}`);
+            } else if (errorData.error === 'Invalid image data format') {
+              showNotificationModal('error', 'Invalid Image Format', `${errorData.details}\n\n${errorData.suggestion}`);
+            } else if (errorData.error === 'File too large') {
+              showNotificationModal('error', 'File Too Large', `${errorData.details}\n\n${errorData.suggestion}`);
+            } else {
+              showNotificationModal('error', 'Error', `Failed to upload image: ${errorData.error || 'Unknown error'}\n\n${errorData.details || ''}\n\n${errorData.suggestion || ''}`);
+            }
           }
         } catch (error) {
           console.error('Upload error:', error);
@@ -547,7 +561,7 @@ export default function StaffDashboard() {
     setConfirmMessage('Are you sure you want to delete this device?');
     setConfirmAction(() => async () => {
       try {
-        const response = await apiRequest(`/api/staff/devices/${deviceId}`, {
+        const response = await apiRequest(`/api/staff/devices?id=${deviceId}`, {
           method: 'DELETE',
         });
 
@@ -556,34 +570,25 @@ export default function StaffDashboard() {
           showNotificationModal('success', 'Success', 'Device deleted successfully!');
         } else {
           const errorData = await response.json();
-          if (errorData.error === 'FOREIGN_KEY_CONSTRAINT') {
-            const message = `Cannot delete this device because it has associated trade-in orders.\n\nWould you like to deactivate this device instead?`;
-            setConfirmTitle('Device Has Orders');
-            setConfirmMessage(message);
-            setConfirmAction(() => async () => {
-              try {
-                const deactivateResponse = await fetch(`/api/staff/devices/${deviceId}`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ isActive: false }),
-                });
-
-                if (deactivateResponse.ok) {
-                  setDevices(devices.map(device => 
-                    device.id === deviceId ? { ...device, isActive: false } : device
-                  ));
-                  showNotificationModal('success', 'Success', 'Device deactivated successfully!');
-                } else {
-                  showNotificationModal('error', 'Error', 'Failed to deactivate device. Please try again.');
-                }
-              } catch (error) {
-                console.error('Error deactivating device:', error);
-                showNotificationModal('error', 'Error', 'Error deactivating device. Please try again.');
-              }
-            });
-            setShowConfirmModal(true);
+          
+          // Handle specific case where device has orders
+          if (errorData.error === 'Cannot delete device' && errorData.orderCount > 0) {
+            const orderList = errorData.orders?.map((order: any) => 
+              `• ${order.orderNumber} (${order.status})`
+            ).join('\n') || '• Unknown orders';
+            
+            showNotificationModal(
+              'error', 
+              'Cannot Delete Device', 
+              `This device has ${errorData.orderCount} order(s) and cannot be deleted.\n\nOrders:\n${orderList}\n\nTo delete this device, you must first:\n1. Delete all associated orders, OR\n2. Reassign the orders to another device\n\n${errorData.suggestion}`
+            );
+          } else if (errorData.error === 'Cannot delete device' && errorData.details) {
+            showNotificationModal('error', 'Cannot Delete Device', `${errorData.details}\n\n${errorData.suggestion || ''}`);
+          } else if (errorData.error === 'Device not found') {
+            showNotificationModal('error', 'Device Not Found', `${errorData.details}\n\n${errorData.suggestion || ''}`);
           } else {
-            showNotificationModal('error', 'Error', 'Failed to delete device. Please try again.');
+            // Handle other errors
+            showNotificationModal('error', 'Error', `Failed to delete device: ${errorData.error || 'Unknown error'}`);
           }
         }
       } catch (error) {
@@ -793,14 +798,14 @@ export default function StaffDashboard() {
         setAllBrands([...allBrands, newBrand]);
         setShowAddBrandForm(false);
         setBrandFormData({ name: '', logoUrl: '', isActive: true });
-        alert('Brand added successfully!');
+        showNotificationModal('success', 'Success', 'Brand added successfully!');
       } else {
         console.error('Failed to add brand');
-        alert('Failed to add brand. Please try again.');
+        showNotificationModal('error', 'Error', 'Failed to add brand. Please try again.');
       }
     } catch (error) {
       console.error('Error adding brand:', error);
-      alert('Error adding brand. Please try again.');
+      showNotificationModal('error', 'Error', 'Error adding brand. Please try again.');
     }
   };
 
@@ -824,14 +829,25 @@ export default function StaffDashboard() {
         setShowAddBrandForm(false);
         setEditingBrand(null);
         setBrandFormData({ name: '', logoUrl: '', isActive: true });
-        alert('Brand updated successfully!');
+        showNotificationModal('success', 'Success', 'Brand updated successfully!');
       } else {
-        console.error('Failed to update brand');
-        alert('Failed to update brand. Please try again.');
+        const errorData = await response.json();
+        console.error('Failed to update brand:', errorData);
+        
+        // Handle specific error cases
+        if (errorData.error === 'Brand name already exists') {
+          showNotificationModal('error', 'Brand Update Failed', `${errorData.details}\n\n${errorData.suggestion}`);
+        } else if (errorData.error === 'Cannot update brand') {
+          showNotificationModal('error', 'Brand Update Failed', `${errorData.details}\n\n${errorData.suggestion}`);
+        } else if (errorData.error === 'Brand not found') {
+          showNotificationModal('error', 'Brand Update Failed', `${errorData.details}\n\n${errorData.suggestion}`);
+        } else {
+          showNotificationModal('error', 'Error', `Failed to update brand: ${errorData.error || 'Unknown error'}\n\n${errorData.details || ''}\n\n${errorData.suggestion || ''}`);
+        }
       }
     } catch (error) {
       console.error('Error updating brand:', error);
-      alert('Error updating brand. Please try again.');
+      showNotificationModal('error', 'Error', 'Error updating brand. Please try again.');
     }
   };
 
@@ -1109,7 +1125,33 @@ export default function StaffDashboard() {
           showNotificationModal('success', 'Success', 'Client deleted successfully!');
         } else {
           const errorData = await response.json();
-          showNotificationModal('error', 'Error', `Failed to delete client: ${errorData.error || 'Unknown error'}`);
+          
+          // Handle specific case where client has orders
+          if (errorData.error === 'Cannot delete client' && errorData.orderCount > 0) {
+            const orderDetails = errorData.orders?.map((order: any) => 
+              `${order.orderNumber} (${order.status})`
+            ).join(', ') || 'unknown orders';
+            
+            const orderList = errorData.orders?.map((order: any) => 
+              `• ${order.orderNumber} (${order.status})`
+            ).join('\n') || '• Unknown orders';
+            
+            showNotificationModal(
+              'error', 
+              'Cannot Delete Client', 
+              `This client has ${errorData.orderCount} order(s) and cannot be deleted.\n\nOrders:\n${orderList}\n\nTo delete this client, you must first:\n1. Delete all their orders, OR\n2. Reassign the orders to another client\n\n${errorData.suggestion}`
+            );
+          } else {
+            // Handle other specific error cases
+            if (errorData.error === 'Cannot delete client' && errorData.details) {
+              showNotificationModal('error', 'Cannot Delete Client', `${errorData.details}\n\n${errorData.suggestion || ''}`);
+            } else if (errorData.error === 'Client not found') {
+              showNotificationModal('error', 'Client Not Found', `${errorData.details}\n\n${errorData.suggestion || ''}`);
+            } else {
+              // Handle generic errors
+              showNotificationModal('error', 'Error', `Failed to delete client: ${errorData.error || 'Unknown error'}`);
+            }
+          }
         }
       } catch (error) {
         console.error('Error deleting client:', error);

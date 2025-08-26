@@ -18,19 +18,69 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       customerFirstName,
       customerLastName,
       customerPhone,
+      customerAddress,
+      customerCity,
+      customerProvince,
+      customerPostalCode,
       deviceModelId,
       deviceConditionId,
       storageOptionId,
       estimatedValue
     } = req.body;
 
+    // Log all received values for debugging
+    console.log('Trade-in Submit API: Received data:', {
+      customerEmail,
+      customerFirstName,
+      customerLastName,
+      customerPhone,
+      customerAddress,
+      customerCity,
+      customerProvince,
+      customerPostalCode,
+      deviceModelId,
+      deviceConditionId,
+      storageOptionId,
+      estimatedValue,
+      bodyKeys: Object.keys(req.body),
+      bodyValues: Object.values(req.body)
+    });
+
     // Validate required fields
     if (!customerEmail || !customerFirstName || !customerLastName || !deviceModelId || !deviceConditionId || !storageOptionId || !estimatedValue) {
+      const missingFields = [];
+      if (!customerEmail) missingFields.push('customerEmail');
+      if (!customerFirstName) missingFields.push('customerFirstName');
+      if (!customerLastName) missingFields.push('customerLastName');
+      if (!deviceModelId) missingFields.push('deviceModelId');
+      if (!deviceConditionId) missingFields.push('deviceConditionId');
+      if (!storageOptionId) missingFields.push('storageOptionId');
+      if (!estimatedValue) missingFields.push('estimatedValue');
+      
+      console.log('Trade-in Submit API: Missing fields:', missingFields);
+      
       return res.status(400).json({ 
         error: 'Missing required fields',
-        details: 'All fields are required for trade-in submission'
+        details: `Missing fields: ${missingFields.join(', ')}`,
+        receivedData: {
+          customerEmail: !!customerEmail,
+          customerFirstName: !!customerFirstName,
+          customerLastName: !!customerLastName,
+          deviceModelId: !!deviceModelId,
+          deviceConditionId: !!deviceConditionId,
+          storageOptionId: !!storageOptionId,
+          estimatedValue: !!estimatedValue
+        }
       });
     }
+    
+    // Log address information (optional fields)
+    console.log('Trade-in Submit API: Address information received:', {
+      address: customerAddress || 'Not provided',
+      city: customerCity || 'Not provided',
+      province: customerProvince || 'Not provided',
+      postalCode: customerPostalCode || 'Not provided'
+    });
 
     // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -66,7 +116,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           email: customerEmail,
           firstName: customerFirstName,
           lastName: customerLastName,
-          phone: customerPhone || null
+          phone: customerPhone || null,
+          addressLine1: customerAddress || null,
+          city: customerCity || null,
+          province: customerProvince || null,
+          postalCode: customerPostalCode || null
         })
         .select()
         .single();
@@ -80,21 +134,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       customerId = newCustomer.id;
-      console.log('Trade-in Submit API: Created new customer:', customerId);
+      console.log('Trade-in Submit API: Created new customer:', customerId, 'with address:', {
+        address: customerAddress,
+        city: customerCity,
+        province: customerProvince,
+        postalCode: customerPostalCode
+      });
     } else {
       customerId = customer.id;
       console.log('Trade-in Submit API: Using existing customer:', customerId);
+      
+      // Update existing customer with new address information if provided
+      if (customerAddress || customerCity || customerProvince || customerPostalCode) {
+        const updateData: any = {};
+        if (customerAddress) updateData.addressLine1 = customerAddress;
+        if (customerCity) updateData.city = customerCity;
+        if (customerProvince) updateData.province = customerProvince;
+        if (customerPostalCode) updateData.postalCode = customerPostalCode;
+        
+        console.log('Trade-in Submit API: Updating existing customer with new address info:', updateData);
+        
+        const { error: updateError } = await supabaseAdmin
+          .from('Customer')
+          .update(updateData)
+          .eq('id', customerId);
+          
+        if (updateError) {
+          console.error('Trade-in Submit API: Customer update error:', updateError);
+          // Don't fail the whole request for address update errors
+        } else {
+          console.log('Trade-in Submit API: Customer address updated successfully');
+        }
+      }
     }
 
-    // Create trade-in order
+    // Generate order number
+    const orderNumber = `TI-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+    
+    // Create trade-in order using correct PascalCase table and column names
     const { data: order, error: orderError } = await supabaseAdmin
       .from('TradeInOrder')
       .insert({
-        customerId,
+        orderNumber: orderNumber,
+        customerId: customerId,
         deviceModelId: parseInt(deviceModelId),
         deviceConditionId: parseInt(deviceConditionId),
         storageOptionId: parseInt(storageOptionId),
-        estimatedValue: parseFloat(estimatedValue),
+        quotedAmount: parseFloat(estimatedValue),
         status: 'PENDING',
         paymentMethod: 'E_TRANSFER'
       })

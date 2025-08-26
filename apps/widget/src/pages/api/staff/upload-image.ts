@@ -20,18 +20,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Check if file is present
-    if (!req.body || !req.body.file) {
-      return res.status(400).json({ error: 'No file provided' });
+    if (!req.body || !req.body.imageData) {
+      return res.status(400).json({ error: 'No image data provided' });
     }
 
-    const { file, fileName, mimeType } = req.body;
+    const { imageData, fileName } = req.body;
 
-    if (!file || !fileName || !mimeType) {
+    if (!imageData || !fileName) {
       return res.status(400).json({ 
         error: 'Missing file information',
-        details: 'File, fileName, and mimeType are required'
+        details: 'Image data and fileName are required'
       });
     }
+
+    // Extract MIME type and base64 data from data URL
+    const dataUrlMatch = imageData.match(/^data:([^;]+);base64,(.+)$/);
+    if (!dataUrlMatch) {
+      return res.status(400).json({ 
+        error: 'Invalid image data format',
+        details: 'Image data must be a valid data URL'
+      });
+    }
+
+    const mimeType = dataUrlMatch[1];
+    const base64Data = dataUrlMatch[2];
 
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -42,41 +54,109 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    const fileSize = Buffer.byteLength(base64Data, 'base64');
+    if (fileSize > maxSize) {
+      return res.status(400).json({ 
+        error: 'File too large',
+        details: `File size (${(fileSize / 1024 / 1024).toFixed(2)}MB) exceeds maximum allowed size (10MB)`,
+        suggestion: 'Please compress the image or choose a smaller file'
+      });
+    }
+
     try {
       // Convert base64 to buffer
-      const buffer = Buffer.from(file, 'base64');
+      const buffer = Buffer.from(base64Data, 'base64');
       
       // Generate unique filename
       const timestamp = Date.now();
       const uniqueFileName = `${timestamp}_${fileName}`;
       
-      // Upload to Supabase Storage
-      const { data, error } = await supabaseAdmin.storage
+      // Upload to Supabase Storage - try different bucket names
+      let uploadResult;
+      let bucketName = 'images';
+      
+      // Try 'images' bucket first
+      console.log('Upload Image API: Attempting to upload to bucket "images" with filename:', uniqueFileName);
+      uploadResult = await supabaseAdmin.storage
         .from('images')
         .upload(uniqueFileName, buffer, {
           contentType: mimeType,
           cacheControl: '3600',
           upsert: false
         });
+      
+      // If 'images' bucket fails, try 'uploads' bucket
+      if (uploadResult.error) {
+        console.log('Upload Image API: "images" bucket failed, trying "uploads" bucket');
+        bucketName = 'uploads';
+        uploadResult = await supabaseAdmin.storage
+          .from('uploads')
+          .upload(uniqueFileName, buffer, {
+            contentType: mimeType,
+            cacheControl: '3600',
+            upsert: false
+          });
+      }
+      
+      // If 'uploads' bucket fails, try 'public' bucket
+      if (uploadResult.error) {
+        console.log('Upload Image API: "uploads" bucket failed, trying "public" bucket');
+        bucketName = 'public';
+        uploadResult = await supabaseAdmin.storage
+          .from('public')
+          .upload(uniqueFileName, buffer, {
+            contentType: mimeType,
+            cacheControl: '3600',
+            upsert: false
+          });
+      }
+      
+      const { data, error } = uploadResult;
 
       if (error) {
         console.error('Upload Image API: Storage error:', error);
-        return res.status(500).json({ 
-          error: 'Failed to upload image',
-          details: error.message || 'Storage error occurred'
-        });
+        console.error('Upload Image API: Error code:', error.statusCode);
+        console.error('Upload Image API: Error message:', error.message);
+        console.error('Upload Image API: Tried buckets: images, uploads, public');
+        
+        // Handle specific storage errors
+        if (error.statusCode === 404) {
+          return res.status(500).json({ 
+            error: 'Storage bucket not found',
+            details: 'None of the storage buckets (images, uploads, public) exist. Please create at least one in your Supabase dashboard.',
+            suggestion: 'Go to Storage > Create bucket named "images" or "uploads"'
+          });
+        } else if (error.statusCode === 403) {
+          return res.status(500).json({ 
+            error: 'Storage access denied',
+            details: 'Access to storage buckets is denied. Check your Supabase storage policies.',
+            suggestion: 'Verify storage policies allow authenticated uploads'
+          });
+        } else {
+          return res.status(500).json({ 
+            error: 'Failed to upload image',
+            details: error.message || 'Storage error occurred',
+            suggestion: 'Check your Supabase storage configuration and policies'
+          });
+        }
       }
 
-      // Get public URL
+      // Get public URL from the bucket that was successfully used
       const { data: urlData } = supabaseAdmin.storage
-        .from('images')
+        .from(bucketName)
         .getPublicUrl(uniqueFileName);
 
       console.log('Upload Image API: Successfully uploaded image:', uniqueFileName);
+      console.log('Upload Image API: Used bucket:', bucketName);
+      console.log('Upload Image API: Public URL:', urlData.publicUrl);
+      console.log('Upload Image API: File size:', buffer.length, 'bytes');
       res.status(200).json({
         success: true,
         fileName: uniqueFileName,
-        url: urlData.publicUrl,
+        imageUrl: urlData.publicUrl, // Changed from 'url' to 'imageUrl' to match frontend
+        url: urlData.publicUrl, // Keep 'url' for backward compatibility
         size: buffer.length
       });
 
