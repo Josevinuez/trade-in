@@ -27,6 +27,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       console.log('Updating device:', deviceId, 'with data:', deviceData);
       console.log('Storage options:', storageOptions);
+      console.log('Full request body:', req.body);
+      console.log('updateStorageOptions flag:', modelData.updateStorageOptions);
       
       try {
         const { data: model, error: modelError } = await supabaseAdmin
@@ -54,9 +56,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         console.log('Device updated:', model.id);
 
-        // Handle storage options update
-        if (storageOptions && storageOptions.length > 0) {
-          console.log('Updating storage options:', storageOptions);
+        // Check if this is just an image update
+        const isImageOnlyUpdate = Object.keys(deviceData).length === 1 && deviceData.imageUrl !== undefined;
+        
+        // Handle storage options update - only if explicitly requested
+        if (storageOptions && storageOptions.length > 0 && modelData.updateStorageOptions === true && !isImageOnlyUpdate) {
+          console.log('Storage options update requested, updating storage options:', storageOptions);
           
           // Delete existing storage options for this model
           const { error: deleteError } = await supabaseAdmin
@@ -104,7 +109,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
           }
         } else {
-          console.log('No storage options provided for update');
+          if (isImageOnlyUpdate) {
+            console.log('Image-only update detected - preserving existing storage options');
+          } else {
+            console.log('No storage options update requested - preserving existing storage options');
+          }
         }
 
         return res.status(200).json(model);
