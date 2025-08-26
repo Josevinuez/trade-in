@@ -529,6 +529,9 @@ export default function StaffDeviceManagement() {
             return;
           }
 
+          // Check if device with same model number already exists
+          const existingDevice = devices.find(d => d.modelNumber === modelNumber);
+          
           if (currentDevice && currentDevice.name === deviceName) {
             // Add storage option to existing device
             if (storage && excellentPrice && goodPrice && fairPrice && poorPrice) {
@@ -541,19 +544,38 @@ export default function StaffDeviceManagement() {
               });
             }
           } else {
-            // Create new device
+            // Create new device or update existing one
             if (currentDevice) {
               devicesToImport.push(currentDevice);
             }
-            currentDevice = {
-              name: deviceName,
-              modelNumber,
-              releaseYear: parseInt(releaseYear),
-              categoryId: category.id,
-              brandId: brand.id,
-              displayOrder: 0,
-              storageOptions: []
-            };
+            
+            if (existingDevice) {
+              // Update existing device
+              currentDevice = {
+                id: existingDevice.id,
+                name: deviceName,
+                modelNumber,
+                releaseYear: parseInt(releaseYear),
+                categoryId: category.id,
+                brandId: brand.id,
+                displayOrder: existingDevice.displayOrder || 0,
+                isUpdate: true, // Flag to indicate this is an update
+                storageOptions: []
+              };
+            } else {
+              // Create new device
+              currentDevice = {
+                name: deviceName,
+                modelNumber,
+                releaseYear: parseInt(releaseYear),
+                categoryId: category.id,
+                brandId: brand.id,
+                displayOrder: 0,
+                isUpdate: false, // Flag to indicate this is a new device
+                storageOptions: []
+              };
+            }
+            
             if (storage && excellentPrice && goodPrice && fairPrice && poorPrice) {
               currentDevice.storageOptions.push({
                 storage,
@@ -577,8 +599,18 @@ export default function StaffDeviceManagement() {
         return;
       }
 
+      // Count updates vs new devices
+      const updateCount = devicesToImport.filter(d => d.isUpdate).length;
+      const newCount = devicesToImport.filter(d => !d.isUpdate).length;
+      
       // Confirm import
-      if (!confirm(`Import ${devicesToImport.length} device(s) with their storage options?`)) {
+      const confirmMessage = 
+        `Import ${devicesToImport.length} device(s) with their storage options?\n\n` +
+        `• ${newCount} new device(s) will be created\n` +
+        `• ${updateCount} existing device(s) will be updated (matching model numbers)\n\n` +
+        `This will preserve existing device IDs, images, and update storage options.`;
+        
+      if (!confirm(confirmMessage)) {
         return;
       }
 
@@ -592,34 +624,76 @@ export default function StaffDeviceManagement() {
       let successCount = 0;
       let errorCount = 0;
 
-      for (const device of devicesToImport) {
-        try {
-          const response = await fetch('/api/staff/devices', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              type: 'model',
-              data: device,
-              storageOptions: device.storageOptions
-            }),
-          });
+              for (const device of devicesToImport) {
+          try {
+            if (device.isUpdate) {
+              // Update existing device - preserve existing image
+              const response = await fetch(`/api/staff/devices/${device.id}`, {
+                method: 'PUT',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  type: 'model',
+                  data: {
+                    name: device.name,
+                    modelNumber: device.modelNumber,
+                    releaseYear: device.releaseYear,
+                    categoryId: device.categoryId,
+                    brandId: device.brandId,
+                    displayOrder: device.displayOrder
+                    // Note: imageUrl is intentionally omitted to preserve existing image
+                  },
+                  storageOptions: device.storageOptions,
+                  updateStorageOptions: true // Force storage options update
+                }),
+              });
 
-          if (response.ok) {
-            successCount++;
-          } else {
+              if (response.ok) {
+                successCount++;
+                console.log(`Updated device: ${device.name} (${device.modelNumber}) - existing image preserved`);
+              } else {
+                errorCount++;
+                console.error(`Failed to update device ${device.name}:`, await response.text());
+              }
+            } else {
+              // Create new device
+              const response = await fetch('/api/staff/devices', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  type: 'model',
+                  data: device,
+                  storageOptions: device.storageOptions
+                }),
+              });
+
+              if (response.ok) {
+                successCount++;
+                console.log(`Created device: ${device.name} (${device.modelNumber})`);
+              } else {
+                errorCount++;
+                console.error(`Failed to create device ${device.name}:`, await response.text());
+              }
+            }
+          } catch (error) {
             errorCount++;
-            console.error(`Failed to import device ${device.name}:`, await response.text());
+            console.error(`Error processing device ${device.name}:`, error);
           }
-        } catch (error) {
-          errorCount++;
-          console.error(`Error importing device ${device.name}:`, error);
         }
-      }
 
-      alert(`Import completed!\n\nSuccessfully imported: ${successCount} device(s)\nFailed to import: ${errorCount} device(s)`);
+      // Count final results
+      const finalUpdateCount = devicesToImport.filter(d => d.isUpdate).length;
+      const finalNewCount = devicesToImport.filter(d => !d.isUpdate).length;
+      
+      alert(`Import completed!\n\nSuccessfully processed: ${successCount} device(s)\n` +
+        `• ${finalNewCount} new device(s) created\n` +
+        `• ${finalUpdateCount} existing device(s) updated\n` +
+        `Failed to process: ${errorCount} device(s)`);
       
       // Refresh data and reset file input
       fetchData();

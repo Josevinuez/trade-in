@@ -33,7 +33,9 @@ import {
   Star,
   TrendingUp,
   Image as ImageIcon,
-  ArrowDown
+  ArrowDown,
+  GripVertical,
+  Save
 } from 'lucide-react';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { NotificationModal } from '../components/NotificationModal';
@@ -102,7 +104,7 @@ interface DeviceModel {
 export default function StaffDashboard() {
   const [staff, setStaff] = useState<{ email: string; role: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'orders' | 'clients' | 'management' | 'brands'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'clients' | 'management' | 'brands' | 'categories'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [devices, setDevices] = useState<DeviceModel[]>([]);
   const [deviceConditions, setDeviceConditions] = useState<any[]>([]);
@@ -175,6 +177,10 @@ export default function StaffDashboard() {
   const [confirmTitle, setConfirmTitle] = useState('');
   const [confirmText, setConfirmText] = useState('Confirm');
   const [confirmType, setConfirmType] = useState<'danger' | 'warning' | 'info'>('danger');
+  
+  // Category reordering state
+  const [isReorderingCategories, setIsReorderingCategories] = useState(false);
+  const [reorderedCategories, setReorderedCategories] = useState<any[]>([]);
   
   // Notification modal state
   const [showNotification, setShowNotification] = useState(false);
@@ -792,6 +798,94 @@ export default function StaffDashboard() {
     }
   };
 
+  const handleCategoryReorder = () => {
+    setIsReorderingCategories(true);
+    setReorderedCategories([...deviceCategories]);
+  };
+
+  const handleCategoryDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
+
+  const handleCategoryDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleCategoryDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    const dragIndex = parseInt(e.dataTransfer.getData('text/plain'));
+    
+    if (dragIndex === dropIndex) return;
+    
+    const newCategories = [...reorderedCategories];
+    const draggedCategory = newCategories[dragIndex];
+    
+    // Remove dragged item
+    newCategories.splice(dragIndex, 1);
+    // Insert at new position
+    newCategories.splice(dropIndex, 0, draggedCategory);
+    
+    // Update display order
+    newCategories.forEach((category, index) => {
+      category.displayOrder = index;
+    });
+    
+    setReorderedCategories(newCategories);
+  };
+
+  const handleCategoryReorderSave = async () => {
+    try {
+      const token = localStorage.getItem('staffAuthToken');
+      if (!token) {
+        showNotificationModal('error', 'Error', 'Authentication required. Please log in again.');
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const category of reorderedCategories) {
+        try {
+          const response = await apiRequest(`/api/staff/categories/${category.id}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              name: category.name,
+              description: category.description,
+              displayOrder: category.displayOrder,
+              isActive: category.isActive
+            }),
+          });
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            errorCount++;
+            console.error(`Failed to update category ${category.name}:`, await response.text());
+          }
+        } catch (error) {
+          errorCount++;
+          console.error(`Error updating category ${category.name}:`, error);
+        }
+      }
+
+      if (errorCount === 0) {
+        showNotificationModal('success', 'Success', `Successfully reordered ${successCount} categories!`);
+        setIsReorderingCategories(false);
+        fetchDeviceManagementData(); // Refresh data
+      } else {
+        showNotificationModal('error', 'Error', `Updated ${successCount} categories, but ${errorCount} failed. Please try again.`);
+      }
+    } catch (error) {
+      console.error('Error saving category order:', error);
+      showNotificationModal('error', 'Error', 'Failed to save category order. Please try again.');
+    }
+  };
+
+  const handleCategoryReorderCancel = () => {
+    setIsReorderingCategories(false);
+    setReorderedCategories([]);
+  };
+
   const handleCSVImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -850,6 +944,9 @@ export default function StaffDashboard() {
             return;
           }
 
+          // Check if device with same model number already exists
+          const existingDevice = devices.find((d: any) => d.modelNumber === modelNumber);
+          
           if (currentDevice && currentDevice.name === deviceName) {
             // Add storage option to existing device
             if (storage && excellentPrice && goodPrice && fairPrice && poorPrice) {
@@ -862,19 +959,38 @@ export default function StaffDashboard() {
               });
             }
           } else {
-            // Create new device
+            // Create new device or update existing one
             if (currentDevice) {
               devicesToImport.push(currentDevice);
             }
-            currentDevice = {
-              name: deviceName,
-              modelNumber,
-              releaseYear: parseInt(releaseYear),
-              categoryId: category.id,
-              brandId: brand.id,
-              displayOrder: 0,
-              storageOptions: []
-            };
+            
+            if (existingDevice) {
+              // Update existing device
+              currentDevice = {
+                id: existingDevice.id,
+                name: deviceName,
+                modelNumber,
+                releaseYear: parseInt(releaseYear),
+                categoryId: category.id,
+                brandId: brand.id,
+                displayOrder: existingDevice.displayOrder || 0,
+                isUpdate: true, // Flag to indicate this is an update
+                storageOptions: []
+              };
+            } else {
+              // Create new device
+              currentDevice = {
+                name: deviceName,
+                modelNumber,
+                releaseYear: parseInt(releaseYear),
+                categoryId: category.id,
+                brandId: brand.id,
+                displayOrder: 0,
+                isUpdate: false, // Flag to indicate this is a new device
+                storageOptions: []
+              };
+            }
+            
             if (storage && excellentPrice && goodPrice && fairPrice && poorPrice) {
               currentDevice.storageOptions.push({
                 storage,
@@ -898,9 +1014,18 @@ export default function StaffDashboard() {
         return;
       }
 
+      // Count updates vs new devices
+      const updateCount = devicesToImport.filter(d => d.isUpdate).length;
+      const newCount = devicesToImport.filter(d => !d.isUpdate).length;
+      
       // Confirm import
       setConfirmTitle('Import Devices');
-      setConfirmMessage(`Import ${devicesToImport.length} device(s) with their storage options?`);
+      setConfirmMessage(
+        `Import ${devicesToImport.length} device(s) with their storage options?\n\n` +
+        `• ${newCount} new device(s) will be created\n` +
+        `• ${updateCount} existing device(s) will be updated (matching model numbers)\n\n` +
+        `This will preserve existing device IDs, images, and update storage options.`
+      );
       setConfirmText('Import');
       setConfirmType('info');
       setConfirmAction(() => async () => {
@@ -909,31 +1034,69 @@ export default function StaffDashboard() {
 
         for (const device of devicesToImport) {
           try {
-            const response = await apiRequest('/api/staff/devices', {
-              method: 'POST',
-              body: JSON.stringify({
-                type: 'model',
-                data: device,
-                storageOptions: device.storageOptions
-              }),
-            });
+            if (device.isUpdate) {
+              // Update existing device - preserve existing image
+              const response = await apiRequest(`/api/staff/devices/${device.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                  type: 'model',
+                  data: {
+                    name: device.name,
+                    modelNumber: device.modelNumber,
+                    releaseYear: device.releaseYear,
+                    categoryId: device.categoryId,
+                    brandId: device.brandId,
+                    displayOrder: device.displayOrder
+                    // Note: imageUrl is intentionally omitted to preserve existing image
+                  },
+                  storageOptions: device.storageOptions,
+                  updateStorageOptions: true // Force storage options update
+                }),
+              });
 
-            if (response.ok) {
-              successCount++;
+              if (response.ok) {
+                successCount++;
+                console.log(`Updated device: ${device.name} (${device.modelNumber}) - existing image preserved`);
+              } else {
+                errorCount++;
+                console.error(`Failed to update device ${device.name}:`, await response.text());
+              }
             } else {
-              errorCount++;
-              console.error(`Failed to import device ${device.name}:`, await response.text());
+              // Create new device
+              const response = await apiRequest('/api/staff/devices', {
+                method: 'POST',
+                body: JSON.stringify({
+                  type: 'model',
+                  data: device,
+                  storageOptions: device.storageOptions
+                }),
+              });
+
+              if (response.ok) {
+                successCount++;
+                console.log(`Created device: ${device.name} (${device.modelNumber})`);
+              } else {
+                errorCount++;
+                console.error(`Failed to create device ${device.name}:`, await response.text());
+              }
             }
           } catch (error) {
             errorCount++;
-            console.error(`Error importing device ${device.name}:`, error);
+            console.error(`Error processing device ${device.name}:`, error);
           }
         }
 
+        // Count final results
+        const finalUpdateCount = devicesToImport.filter(d => d.isUpdate).length;
+        const finalNewCount = devicesToImport.filter(d => !d.isUpdate).length;
+        
         showNotificationModal(
           'success', 
           'Import Completed', 
-          `Successfully imported: ${successCount} device(s)\nFailed to import: ${errorCount} device(s)`
+          `Successfully processed: ${successCount} device(s)\n` +
+          `• ${finalNewCount} new device(s) created\n` +
+          `• ${finalUpdateCount} existing device(s) updated\n` +
+          `Failed to process: ${errorCount} device(s)`
         );
         
         // Refresh data and reset file input
@@ -1619,6 +1782,19 @@ export default function StaffDashboard() {
             <div className="flex items-center justify-center space-x-2">
               <BarChart3 className="w-4 h-4" />
               <span>Brand Management</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('categories')}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'categories'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <Smartphone className="w-4 h-4" />
+              <span>Categories</span>
             </div>
           </button>
         </div>
@@ -3026,6 +3202,113 @@ export default function StaffDashboard() {
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Categories Tab */}
+        {activeTab === 'categories' && (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Category Management</h2>
+                <p className="text-gray-600">Manage device categories and their display order</p>
+              </div>
+              <div className="flex space-x-3">
+                {!isReorderingCategories ? (
+                  <button
+                    onClick={handleCategoryReorder}
+                    className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                  >
+                    <GripVertical className="w-4 h-4" />
+                    <span>Reorder Categories</span>
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleCategoryReorderSave}
+                      className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>Save Order</span>
+                    </button>
+                    <button
+                      onClick={handleCategoryReorderCancel}
+                      className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                      <span>Cancel</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Categories Grid */}
+            <div className="bg-white rounded-xl shadow-sm border">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Device Categories</h3>
+                {deviceCategories.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Smartphone className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No categories found.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {(isReorderingCategories ? reorderedCategories : deviceCategories).map((category, index) => (
+                      <div
+                        key={category.id}
+                        draggable={isReorderingCategories}
+                        onDragStart={(e) => handleCategoryDragStart(e, index)}
+                        onDragOver={(e) => handleCategoryDragOver(e)}
+                        onDrop={(e) => handleCategoryDrop(e, index)}
+                        className={`p-6 rounded-lg border-2 transition-all cursor-pointer ${
+                          isReorderingCategories 
+                            ? 'border-blue-300 bg-blue-50 hover:border-blue-400 cursor-grab active:cursor-grabbing' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex flex-col items-center space-y-3">
+                          <div className="flex items-center space-x-2">
+                            {isReorderingCategories && (
+                              <GripVertical className="w-4 h-4 text-blue-500" />
+                            )}
+                            <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                              <span className="text-2xl">
+                                {category.name === 'Smartphones' ? '📱' : 
+                                 category.name === 'Tablets' ? '📱' : 
+                                 category.name === 'Laptops' ? '💻' : 
+                                 category.name === 'Gaming Consoles' ? '🎮' : '📱'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <span className="font-medium text-gray-900">{category.name}</span>
+                            {isReorderingCategories && (
+                              <div className="text-xs text-blue-600 mt-1">
+                                Position: {index + 1}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Reordering Instructions */}
+            {isReorderingCategories && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">📋 How to Reorder Categories:</h4>
+                <div className="text-sm text-blue-800 space-y-1">
+                  <p>• Drag and drop categories to change their order</p>
+                  <p>• The order determines how categories appear in the trade-in form</p>
+                  <p>• Click "Save Order" to apply changes, or "Cancel" to discard</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
