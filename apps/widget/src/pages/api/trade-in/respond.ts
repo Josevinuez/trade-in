@@ -14,11 +14,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { orderId, email, response, notes } = req.body;
+    
+    console.log('Trade-in Respond API: Received request body:', req.body);
+    console.log('Trade-in Respond API: Parsed fields:', { orderId, email, response, notes });
 
     if (!orderId || !email || !response) {
+      console.error('Trade-in Respond API: Missing required fields:', { orderId, email, response });
       return res.status(400).json({ 
         error: 'Missing required fields',
-        details: 'Order ID, email, and response are required'
+        details: 'Order ID, email, and response are required',
+        received: { orderId, email, response }
+      });
+    }
+
+    // Validate orderId is a valid number
+    const orderIdNum = parseInt(orderId as string);
+    if (isNaN(orderIdNum)) {
+      console.error('Trade-in Respond API: Invalid orderId:', orderId);
+      return res.status(400).json({ 
+        error: 'Invalid order ID',
+        details: 'Order ID must be a valid number',
+        received: { orderId }
       });
     }
 
@@ -38,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         *,
         customer:Customer(*)
       `)
-      .eq('id', orderId)
+      .eq('id', orderIdNum)
       .single();
 
     if (orderError || !order) {
@@ -59,8 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Update order status
     const updateData: any = {
-      status: response === 'ACCEPTED' ? 'ACCEPTED' : response === 'REJECTED' ? 'REJECTED' : 'COUNTER_OFFER',
-      updatedAt: new Date().toISOString()
+      status: response === 'ACCEPTED' ? 'ACCEPTED' : response === 'REJECTED' ? 'REJECTED' : 'COUNTER_OFFER'
     };
 
     if (notes) {
@@ -70,7 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: updatedOrder, error: updateError } = await supabaseAdmin
       .from('TradeInOrder')
       .update(updateData)
-      .eq('id', orderId)
+      .eq('id', orderIdNum)
       .select()
       .single();
 
@@ -86,13 +101,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await supabaseAdmin
       .from('OrderStatusHistory')
       .insert({
-        orderId: orderId,
+        orderId: orderIdNum,
         status: updateData.status,
         notes: notes || `Customer ${response.toLowerCase()} the offer`,
         updatedBy: 1 // System user
       });
 
-    console.log('Trade-in Respond API: Successfully processed response for order:', orderId);
+    console.log('Trade-in Respond API: Successfully processed response for order:', orderIdNum);
+    console.log('Trade-in Respond API: Updated order data:', updatedOrder);
     res.status(200).json({
       success: true,
       message: `Order ${response.toLowerCase()} successfully`,

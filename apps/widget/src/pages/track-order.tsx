@@ -323,14 +323,22 @@ export default function TrackOrder() {
                       const res = await fetch('/api/trade-in/respond', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, orderNumber, decision: 'approve' })
+                        body: JSON.stringify({ 
+                          orderId: order.id, 
+                          email, 
+                          response: 'ACCEPTED' 
+                        })
                       });
                       if (!res.ok) {
                         const data = await res.json().catch(() => ({}));
                         throw new Error(data.error || 'Failed to approve');
                       }
                       const data = await res.json();
-                      setOrder(data);
+                      if (data.success && data.order) {
+                        setOrder(data.order);
+                      } else {
+                        throw new Error(data.error || 'Invalid response from server');
+                      }
                     } catch (e: any) {
                       setError(e.message || 'Failed to approve');
                     } finally {
@@ -350,14 +358,22 @@ export default function TrackOrder() {
                       const res = await fetch('/api/trade-in/respond', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, orderNumber, decision: 'decline' })
+                        body: JSON.stringify({ 
+                          orderId: order.id, 
+                          email, 
+                          response: 'REJECTED' 
+                        })
                       });
                       if (!res.ok) {
                         const data = await res.json().catch(() => ({}));
                         throw new Error(data.error || 'Failed to decline');
                       }
                       const data = await res.json();
-                      setOrder(data);
+                      if (data.success && data.order) {
+                        setOrder(data.order);
+                      } else {
+                        throw new Error(data.error || 'Invalid response from server');
+                      }
                     } catch (e: any) {
                       setError(e.message || 'Failed to decline');
                     } finally {
